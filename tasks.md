@@ -66,15 +66,15 @@ This document provides a detailed breakdown of tasks required to implement the S
 **Dependencies**: T003  
 **Context**: Implement core energy generation, storage, and consumption mechanics
 
-- [ ] T004.1: Solar panel system
+- [x] T004.1: Solar panel system
   - Create SolarPanel class with capacity, efficiency properties
   - Implement basic energy generation calculation
   - Add time-of-day solar output variation
-- [ ] T004.2: Battery storage system
+- [x] T004.2: Battery storage system
   - Create Battery class with capacity, charge level properties
   - Implement charge/discharge mechanics with efficiency losses
   - Add battery degradation over time
-- [ ] T004.3: Energy flow calculation
+- [x] T004.3: Energy flow calculation
   - Create energy balance calculator
   - Implement priority-based power allocation
   - Add energy surplus/deficit tracking
@@ -84,11 +84,11 @@ This document provides a detailed breakdown of tasks required to implement the S
 **Dependencies**: T004  
 **Context**: Create household entities with basic energy consumption
 
-- [ ] T005.1: Household class implementation
+- [x] T005.1: Household class implementation
   - Create Household class with energy demand, type properties
   - Implement basic consumption patterns (base load, variable load)
   - Add household state management (satisfied, rationed, disconnected)
-- [ ] T005.2: Single cabin implementation
+- [x] T005.2: Single cabin implementation
   - Create initial cabin with basic appliances
   - Implement simple energy demand curve
   - Add cabin visualization data
