@@ -27,12 +27,18 @@ class GameState {
         this.weather = {
             cloudCover: 0.0, // 0.0 = clear, 1.0 = completely cloudy
             intensity: 1.0,  // Solar intensity multiplier
-            forecast: []     // Weather forecast array
+            forecast: [],    // Weather forecast array
+            transitionSpeed: 0.1, // How fast weather changes
+            nextWeatherChange: 0 // When next weather change occurs
         };
+        
+        // Initialize weather forecast
+        this.generateWeatherForecast();
         
         // Crisis/event state
         this.activeEvents = [];
         this.eventHistory = [];
+        this.eventSystem = null; // Will be initialized after construction
     }
     
     initialize() {
@@ -42,6 +48,9 @@ class GameState {
         
         // Set up initial cabin and basic equipment
         this.setupInitialState();
+        
+        // Initialize event system
+        this.eventSystem = new EventSystem(this);
         
         // Validate initial state
         if (this.validateState()) {
@@ -108,8 +117,72 @@ class GameState {
         
         this.time += deltaTime / 3600; // Convert seconds to hours
         
+        // Update weather system
+        this.updateWeather(deltaTime);
+        
+        // Update event system
+        if (this.eventSystem) {
+            this.eventSystem.update(deltaTime);
+        }
+        
         // Update energy calculations
         this.updateEnergySystem(deltaTime);
+    }
+    
+    updateWeather(deltaTime) {
+        // Check if it's time for weather change
+        if (this.time >= this.weather.nextWeatherChange) {
+            this.triggerWeatherChange();
+        }
+        
+        // Update weather forecast
+        this.updateWeatherForecast();
+    }
+    
+    triggerWeatherChange() {
+        // Simple weather state transitions
+        const weatherStates = [
+            { cloudCover: 0.0, intensity: 1.0, duration: 2.0 }, // Clear
+            { cloudCover: 0.3, intensity: 0.8, duration: 1.5 }, // Light clouds
+            { cloudCover: 0.7, intensity: 0.4, duration: 1.0 }, // Heavy clouds
+            { cloudCover: 0.9, intensity: 0.1, duration: 0.5 }  // Storm
+        ];
+        
+        const newWeather = weatherStates[Math.floor(Math.random() * weatherStates.length)];
+        
+        // Transition to new weather
+        this.weather.cloudCover = newWeather.cloudCover;
+        this.weather.intensity = newWeather.intensity;
+        this.weather.nextWeatherChange = this.time + newWeather.duration + Math.random();
+        
+        console.log(`Weather changed: ${newWeather.cloudCover * 100}% clouds`);
+    }
+    
+    generateWeatherForecast() {
+        // Generate simple 2-hour forecast
+        this.weather.forecast = [];
+        let currentTime = this.time;
+        
+        for (let i = 0; i < 4; i++) { // 4 30-minute periods
+            currentTime += 0.5;
+            
+            // Simple forecast with some accuracy variation
+            const accuracy = 0.8 + Math.random() * 0.2; // 80-100% accuracy
+            const forecastCloudCover = Math.random() * accuracy;
+            
+            this.weather.forecast.push({
+                time: currentTime,
+                cloudCover: forecastCloudCover,
+                confidence: accuracy
+            });
+        }
+    }
+    
+    updateWeatherForecast() {
+        // Update forecast every game hour
+        if (Math.floor(this.time) !== Math.floor(this.time - 0.016)) { // Roughly every hour
+            this.generateWeatherForecast();
+        }
     }
     
     updateEnergySystem(deltaTime) {

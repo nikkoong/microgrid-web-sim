@@ -102,11 +102,11 @@ This document provides a detailed breakdown of tasks required to implement the S
 **Dependencies**: T004  
 **Context**: Implement weather effects that impact solar generation
 
-- [ ] T006.1: Weather state management
+- [x] T006.1: Weather state management
   - Create weather system with cloud cover, intensity levels
   - Implement weather state transitions
   - Add solar generation multipliers based on weather
-- [ ] T006.2: Weather forecasting
+- [x] T006.2: Weather forecasting
   - Create simple weather prediction system (1-2 hours ahead)
   - Implement forecast accuracy mechanics
   - Add weather alerts and notifications
@@ -116,11 +116,11 @@ This document provides a detailed breakdown of tasks required to implement the S
 **Dependencies**: T005, T006  
 **Context**: Create the foundation for crisis events that drive gameplay
 
-- [ ] T007.1: Event system framework
+- [x] T007.1: Event system framework
   - Create Event class with triggers, conditions, effects
   - Implement event queue and scheduling
   - Add event resolution tracking
-- [ ] T007.2: Basic crisis types
+- [x] T007.2: Basic crisis types
   - Implement cloud cover events affecting solar
   - Create equipment failure events
   - Add demand spike events from household activities

@@ -180,11 +180,26 @@ const Game = {
         this.ctx.fillText(`Cloud Cover: ${(gs.weather.cloudCover * 100).toFixed(0)}%`, 20, 370);
         this.ctx.fillText(`Solar Intensity: ${(gs.getSolarIntensity() * 100).toFixed(0)}%`, 20, 390);
         
+        // Active Events
+        this.ctx.fillText('=== Active Events ===', 20, 420);
+        if (gs.eventSystem) {
+            const activeEvents = gs.eventSystem.getActiveEvents();
+            if (activeEvents.length === 0) {
+                this.ctx.fillText('No active events', 20, 440);
+            } else {
+                activeEvents.slice(0, 3).forEach((event, index) => {
+                    const y = 440 + index * 20;
+                    this.ctx.fillText(`${event.name}: ${event.timeRemaining.toFixed(1)}h`, 20, y);
+                });
+            }
+        }
+        
         // Simple visualization placeholder
         this.ctx.fillStyle = '#4a4a4a';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('(Visual game world will be implemented in T009)', this.width / 2, this.height - 100);
-        this.ctx.fillText('Game state system active and updating!', this.width / 2, this.height - 80);
+        this.ctx.fillText('(Visual game world will be implemented in T009)', this.width / 2, this.height - 120);
+        this.ctx.fillText('Game state system active and updating!', this.width / 2, this.height - 100);
+        this.ctx.fillText('Crisis events now triggering automatically!', this.width / 2, this.height - 80);
     },
     
     renderLoadingScreen() {
