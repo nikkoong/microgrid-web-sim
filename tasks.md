@@ -29,7 +29,7 @@ This document provides a detailed breakdown of tasks required to implement the S
   - Add canvas element with proper dimensions
   - Include meta tags for responsive design
   - Link CSS and JavaScript files
-- [ ] T001.3: Initialize Git repository
+- [x] T001.3: Initialize Git repository
   - Create `.gitignore` file
   - Make initial commit with basic structure
 
@@ -38,11 +38,11 @@ This document provides a detailed breakdown of tasks required to implement the S
 **Dependencies**: T001  
 **Context**: Initialize HTML5 Canvas and create basic rendering loop
 
-- [ ] T002.1: Canvas initialization
+- [x] T002.1: Canvas initialization
   - Get canvas context and set dimensions
   - Implement window resize handling
   - Create basic coordinate system (screen to game world)
-- [ ] T002.2: Game loop implementation
+- [x] T002.2: Game loop implementation
   - Create `requestAnimationFrame` loop
   - Implement delta time calculation
   - Add FPS counter for debugging
