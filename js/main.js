@@ -14,11 +14,26 @@ const Game = {
     frameCount: 0,
     fpsUpdateTime: 0,
     isRunning: false,
+    gameState: null,
+    autoSaveInterval: 30000, // Auto-save every 30 seconds
+    lastAutoSave: 0,
     
     init() {
         console.log("Initializing game...");
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        // Initialize game state
+        this.gameState = new GameState();
+        
+        // Try to load existing save, otherwise use initial state
+        if (StorageManager.hasExistingSave()) {
+            console.log("Found existing save, loading...");
+            StorageManager.loadGame(this.gameState);
+        }
+        
+        // Initialize the game state
+        this.gameState.initialize();
         
         // Set up canvas dimensions
         this.setupCanvas();
@@ -78,6 +93,9 @@ const Game = {
         // Update game state
         this.update(deltaTime);
         
+        // Handle auto-save
+        this.handleAutoSave(currentTime);
+        
         // Render frame
         this.render();
         
@@ -96,8 +114,17 @@ const Game = {
     },
     
     update(deltaTime) {
-        // Game logic updates will go here
-        // For now, just a placeholder
+        // Update game state
+        if (this.gameState && this.gameState.initialized) {
+            this.gameState.update(deltaTime);
+        }
+    },
+    
+    handleAutoSave(currentTime) {
+        if (currentTime - this.lastAutoSave >= this.autoSaveInterval) {
+            StorageManager.saveGame(this.gameState);
+            this.lastAutoSave = currentTime;
+        }
     },
     
     render() {
@@ -105,18 +132,66 @@ const Game = {
         this.ctx.fillStyle = '#90ee90';
         this.ctx.fillRect(0, 0, this.width, this.height);
         
+        // Render game state if available
+        if (this.gameState && this.gameState.initialized) {
+            this.renderGameState();
+        } else {
+            this.renderLoadingScreen();
+        }
+        
         // Draw FPS counter for debugging
         this.ctx.fillStyle = '#000000';
-        this.ctx.font = '16px monospace';
-        this.ctx.fillText(`FPS: ${this.fps}`, 10, 25);
+        this.ctx.font = '14px monospace';
+        this.ctx.fillText(`FPS: ${this.fps}`, 10, 20);
+    },
+    
+    renderGameState() {
+        const gs = this.gameState;
         
-        // Temporary text to show the game is running
+        // Title
         this.ctx.fillStyle = '#2b2b2b';
         this.ctx.font = '24px monospace';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('Solar Microgrid Management Game', this.width / 2, this.height / 2);
-        this.ctx.fillText('Game Loop Active', this.width / 2, this.height / 2 + 40);
-        this.ctx.textAlign = 'left'; // Reset alignment
+        this.ctx.fillText('Solar Microgrid Management Game', this.width / 2, 50);
+        
+        // Game stats display
+        this.ctx.font = '16px monospace';
+        this.ctx.textAlign = 'left';
+        
+        // Money and time
+        this.ctx.fillText(`Money: $${gs.money.toFixed(0)}`, 20, 100);
+        this.ctx.fillText(`Time: ${gs.time.toFixed(1)} hours`, 20, 120);
+        
+        // Energy system stats
+        this.ctx.fillText('=== Energy System ===', 20, 150);
+        this.ctx.fillText(`Generation: ${gs.energy.generation.toFixed(2)} kW`, 20, 170);
+        this.ctx.fillText(`Consumption: ${gs.energy.consumption.toFixed(2)} kW`, 20, 190);
+        this.ctx.fillText(`Storage: ${gs.energy.storage.toFixed(1)}/${gs.batteries[0]?.capacity || 0} kWh`, 20, 210);
+        this.ctx.fillText(`Surplus: ${gs.energy.surplus.toFixed(2)} kW`, 20, 230);
+        
+        // Equipment counts
+        this.ctx.fillText('=== Equipment ===', 20, 260);
+        this.ctx.fillText(`Solar Panels: ${gs.solarPanels.length}`, 20, 280);
+        this.ctx.fillText(`Batteries: ${gs.batteries.length}`, 20, 300);
+        this.ctx.fillText(`Households: ${gs.households.length}`, 20, 320);
+        
+        // Weather
+        this.ctx.fillText('=== Weather ===', 20, 350);
+        this.ctx.fillText(`Cloud Cover: ${(gs.weather.cloudCover * 100).toFixed(0)}%`, 20, 370);
+        this.ctx.fillText(`Solar Intensity: ${(gs.getSolarIntensity() * 100).toFixed(0)}%`, 20, 390);
+        
+        // Simple visualization placeholder
+        this.ctx.fillStyle = '#4a4a4a';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('(Visual game world will be implemented in T009)', this.width / 2, this.height - 100);
+        this.ctx.fillText('Game state system active and updating!', this.width / 2, this.height - 80);
+    },
+    
+    renderLoadingScreen() {
+        this.ctx.fillStyle = '#2b2b2b';
+        this.ctx.font = '24px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Loading Game State...', this.width / 2, this.height / 2);
     }
 };
 
