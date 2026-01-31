@@ -82,6 +82,7 @@ class Button extends UIElement {
             textColor = this.style.disabledTextColor;
             borderColor = this.style.disabledBorderColor;
         } else if (this.clicked) {
+            // More prominent pressed state for touch
             bgColor = this.style.activeBgColor;
             textColor = this.style.textColor;
             borderColor = this.style.borderColor;
@@ -95,12 +96,15 @@ class Button extends UIElement {
             borderColor = this.style.borderColor;
         }
 
+        // Draw button with slight offset when pressed (touch feedback)
+        const pressOffset = this.clicked ? 2 : 0;
+        
         ctx.fillStyle = bgColor;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillRect(this.x + pressOffset, this.y + pressOffset, this.width, this.height);
 
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        ctx.lineWidth = this.clicked ? 3 : 2; // Thicker border when pressed
+        ctx.strokeRect(this.x + pressOffset, this.y + pressOffset, this.width, this.height);
 
         ctx.fillStyle = textColor;
         ctx.font = `bold ${this.style.fontSize} ${this.style.fontFamily}`;
@@ -111,10 +115,10 @@ class Button extends UIElement {
         const lines = this.text.split('\n');
         const lineHeight = parseInt(this.style.fontSize) + 4;
         const totalHeight = lines.length * lineHeight;
-        const startY = this.y + (this.height - totalHeight) / 2 + lineHeight / 2;
+        const startY = (this.y + pressOffset) + (this.height - totalHeight) / 2 + lineHeight / 2;
         
         lines.forEach((line, index) => {
-            ctx.fillText(line, this.x + this.width / 2, startY + index * lineHeight);
+            ctx.fillText(line, (this.x + pressOffset) + this.width / 2, startY + index * lineHeight);
         });
 
         super.render(ctx);
