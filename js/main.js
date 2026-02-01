@@ -4,8 +4,8 @@
 const Game = {
     canvas: null,
     ctx: null,
-    width: 1200,
-    height: 800,
+    width: 1200,  // Logical game width
+    height: 800,  // Logical game height
     lastTime: 0,
     isRunning: false,
     gameState: null,
@@ -21,6 +21,11 @@ const Game = {
     dialog: null,
     mouseX: 0,
     mouseY: 0,
+    
+    // Camera and touch systems (new)
+    camera: null,
+    touchHandler: null,
+    dpr: 1, // Device pixel ratio
     
     // Placement system
     placementMode: false,
@@ -52,85 +57,15 @@ const Game = {
     // Pause/Play state
     isPaused: false,
     
-    // Device and layout detection
+    // Device detection
     isMobile: false,
     isTouch: false,
     orientation: 'landscape',
-    viewportWidth: 1200,
-    viewportHeight: 800,
-    scaleFactor: 1,
     layoutMode: 'desktop', // 'desktop', 'tablet', 'mobile'
-    orientationWarningShown: false,
-    notificationPosition: { x: 500, y: 470 },
     
-    // Touch state tracking
-    touch: {
-        active: false,
-        startX: 0,
-        startY: 0,
-        currentX: 0,
-        currentY: 0,
-        startTime: 0,
-        isDragging: false,
-        dragThreshold: 10, // pixels before considered a drag
-        longPressTime: 500, // ms for long press
-        longPressTimer: null
-    },
-    
-    // Mobile cancel button (only visible in placement mode on mobile)
-    cancelPlacementButton: null,
-    
-    // Layout configuration for different screen sizes
-    layouts: {
-        desktop: {
-            shopButton: { x: 1050, y: 10, w: 140, h: 40 },
-            newGameButton: { x: 900, y: 10, w: 140, h: 40 },
-            timeButton: { x: 20, y: 10, w: 200, h: 30 },
-            pauseButton: { x: 230, y: 10, w: 100, h: 30 },
-            helpButton: { x: 340, y: 10, w: 40, h: 30 },
-            weatherButton: { x: 20, y: 50, w: 300, h: 30 },
-            energyBars: { x: 20, y: 450, w: 300, h: 30, spacing: 40 },
-            statsPanel: { x: 20, y: 580, w: 300, h: 230 },
-            goalPanel: { x: 400, y: 10, w: 400, h: 110 },
-            shopMenu: { x: 900, y: 100, w: 280, h: 400 },
-            selectionPanel: { x: 900, y: 520, w: 280, h: 200 },
-            notifications: { x: 500, y: 470 },
-            fontSize: { small: 10, medium: 12, large: 14 }
-        },
-        tablet: {
-            shopButton: { x: 1050, y: 10, w: 140, h: 44 },
-            newGameButton: { x: 900, y: 10, w: 140, h: 44 },
-            timeButton: { x: 20, y: 10, w: 200, h: 35 },
-            pauseButton: { x: 230, y: 10, w: 100, h: 35 },
-            helpButton: { x: 340, y: 10, w: 44, h: 35 },
-            weatherButton: { x: 20, y: 55, w: 300, h: 35 },
-            energyBars: { x: 20, y: 450, w: 300, h: 35, spacing: 45 },
-            statsPanel: { x: 20, y: 590, w: 300, h: 210 },
-            goalPanel: { x: 400, y: 10, w: 400, h: 110 },
-            shopMenu: { x: 900, y: 100, w: 280, h: 400 },
-            selectionPanel: { x: 900, y: 520, w: 280, h: 200 },
-            notifications: { x: 500, y: 470 },
-            fontSize: { small: 11, medium: 13, large: 15 }
-        },
-        mobile: {
-            // Mobile landscape layout - UI compressed to edges
-            shopButton: { x: 1050, y: 10, w: 140, h: 50 },
-            newGameButton: { x: 900, y: 10, w: 140, h: 50 },
-            timeButton: { x: 20, y: 10, w: 180, h: 35 },
-            pauseButton: { x: 210, y: 10, w: 80, h: 35 },
-            helpButton: { x: 300, y: 10, w: 50, h: 35 },
-            weatherButton: { x: 20, y: 55, w: 280, h: 35 },
-            energyBars: { x: 20, y: 420, w: 280, h: 40, spacing: 50 },
-            statsPanel: { x: 20, y: 580, w: 280, h: 200 },
-            goalPanel: { x: 380, y: 10, w: 380, h: 100 },
-            shopMenu: { x: 460, y: 100, w: 280, h: 380 },
-            selectionPanel: { x: 460, y: 500, w: 280, h: 180 },
-            notifications: { x: 460, y: 350 },
-            fontSize: { small: 12, medium: 14, large: 16 },
-            // Mobile-specific: cancel button for placement mode
-            cancelButton: { x: 540, y: 740, w: 120, h: 50 }
-        }
-    },
+    // Mobile UI state
+    shopDrawerOpen: false,
+    selectionPanelOpen: false,
     
     // Entity selection and management
     selectedEntity: null,
@@ -140,8 +75,14 @@ const Game = {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         
-        // Detect device FIRST
+        // Detect device type
         this.detectDevice();
+        
+        // Set up High-DPI canvas
+        this.setupHighDPICanvas();
+        
+        // Initialize camera system
+        this.camera = new Camera(this.width, this.height);
         
         // Initialize game state
         this.gameState = new GameState();
@@ -150,35 +91,107 @@ const Game = {
         // Initialize new systems
         this.initializeSystems();
         
-        // Set up canvas dimensions
-        this.setupCanvas();
+        // Set up touch handler (for mobile pan/zoom)
+        this.setupTouchHandler();
         
         // Handle window resize
         window.addEventListener('resize', () => this.handleResize());
         
         // Handle orientation change (iOS specific)
         window.addEventListener('orientationchange', () => {
-            // Delay to allow browser to update dimensions
             setTimeout(() => this.handleResize(), 100);
         });
         
-        // Handle mouse events
+        // Handle mouse events (for desktop)
         this.setupMouseEvents();
-        
-        // Check orientation on mobile
-        this.checkOrientation();
         
         // Start game loop
         this.startGameLoop();
         
-        // Show tutorial dialog
+        // Show tutorial notification
         this.showTutorial();
+    },
+    
+    setupHighDPICanvas() {
+        // Get device pixel ratio
+        this.dpr = window.devicePixelRatio || 1;
+        
+        // Get the container dimensions
+        const container = document.getElementById('gameContainer');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        // Calculate the display size (CSS pixels) - fit to container while maintaining aspect ratio
+        const aspectRatio = this.width / this.height;
+        let displayWidth, displayHeight;
+        
+        if (containerWidth / containerHeight > aspectRatio) {
+            // Container is wider - fit to height
+            displayHeight = containerHeight;
+            displayWidth = displayHeight * aspectRatio;
+        } else {
+            // Container is taller - fit to width
+            displayWidth = containerWidth;
+            displayHeight = displayWidth / aspectRatio;
+        }
+        
+        // Set display size (CSS pixels)
+        this.canvas.style.width = displayWidth + 'px';
+        this.canvas.style.height = displayHeight + 'px';
+        
+        // Set actual canvas resolution (physical pixels for high-DPI)
+        // Note: Setting canvas.width/height resets the context transform
+        this.canvas.width = this.width * this.dpr;
+        this.canvas.height = this.height * this.dpr;
+        
+        // Scale the context to match DPI
+        // (no need to reset transform first since setting canvas dimensions already resets it)
+        this.ctx.scale(this.dpr, this.dpr);
+        
+        // Update camera viewport
+        if (this.camera) {
+            this.camera.setViewport(this.width, this.height);
+            this.camera.dpr = this.dpr;
+        }
+        
+        console.log(`Canvas setup: ${this.width}x${this.height} logical, ${this.canvas.width}x${this.canvas.height} physical (DPR: ${this.dpr})`);
+    },
+    
+    setupTouchHandler() {
+        // Create touch handler with camera
+        this.touchHandler = new TouchHandler(this.canvas, this.camera);
+        
+        // Set up tap callback (treat as click)
+        // Note: onTap receives SCREEN coordinates (logical pixels), not world coordinates
+        // We need to handle UI clicks first (screen space) before world clicks
+        this.touchHandler.onTap = (screenX, screenY) => {
+            // First check UI elements (they're in screen space)
+            if (this.handleUIClick(screenX, screenY)) {
+                return;
+            }
+            
+            // Convert to world coordinates for game objects
+            const worldPos = this.camera.screenToWorld(screenX, screenY);
+            this.handleWorldClick(worldPos.x, worldPos.y);
+        };
+        
+        // Set up long press callback (show entity details)
+        // Also receives screen coordinates
+        this.touchHandler.onLongPress = (screenX, screenY) => {
+            if (!this.placementMode) {
+                const worldPos = this.camera.screenToWorld(screenX, screenY);
+                const entity = this.getEntityAtWorldPosition(worldPos.x, worldPos.y);
+                if (entity) {
+                    this.selectEntity(entity.item, entity.type);
+                }
+            }
+        };
     },
     
     initializeSystems() {
         // Initialize UI framework
         this.notificationSystem = new NotificationSystem();
-        this.lastEventNotificationDay = -1; // Track last day we showed an event notification
+        this.lastEventNotificationDay = -1;
         
         // Initialize visual systems
         this.spriteManager = new SpriteManager();
@@ -189,6 +202,9 @@ const Game = {
             this.spriteManager,
             this.particleSystem
         );
+        
+        // Pass camera to world renderer
+        this.worldRenderer.camera = this.camera;
         
         // Initialize economic system
         this.purchaseManager = new PurchaseManager(this.gameState);
@@ -206,7 +222,7 @@ const Game = {
         // Shop button (with money display)
         const moneyButton = new Button(
             1050, 10, 140, 40,
-            'SHOP - $1000', // Shop button with money display
+            'SHOP - $1000',
             () => {
                 this.shopMenu.visible = !this.shopMenu.visible;
             },
@@ -220,7 +236,7 @@ const Game = {
         );
         this.uiElements.push(moneyButton);
         
-        // Energy bars (max values will be updated dynamically)
+        // Energy bars
         const generationBar = new EnergyBar(20, 450, 300, 30, 50, 0, '#1e90ff', 'Generation');
         const storageBar = new EnergyBar(20, 490, 300, 30, 100, 0, '#00ff00', 'Storage');
         const consumptionBar = new EnergyBar(20, 530, 300, 30, 50, 0, '#ff6b6b', 'Consumption');
@@ -234,7 +250,7 @@ const Game = {
         // Pause/Play button
         const pauseButton = new Button(230, 10, 100, 30, 'Pause', () => {
             this.isPaused = !this.isPaused;
-            pauseButton.text = this.isPaused ? 'Play ▶' : 'Pause ⏸';
+            pauseButton.text = this.isPaused ? 'Play' : 'Pause';
             this.notificationSystem.addNotification(this.isPaused ? 'Game paused' : 'Game resumed', 'info');
         }, { 
             bgColor: '#74b9ff',
@@ -244,19 +260,19 @@ const Game = {
         });
         this.uiElements.push(pauseButton);
         
-        // Weather info (move below energy bars, not overlapping time)
+        // Weather info
         const weatherButton = new Button(20, 50, 300, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: '#000000' });
         this.uiElements.push(weatherButton);
         
-        // Stats panel (bottom-left, below energy bars and weather) - increased height for satisfaction line
+        // Stats panel
         const statsPanel = new Panel(20, 580, 300, 230, 'Grid Statistics');
         this.uiElements.push(statsPanel);
         
-        // Goal panel (top-center, taller to accommodate detailed progress)
+        // Goal panel
         const goalPanel = new Panel(400, 10, 400, 110, 'Current Goal');
         this.uiElements.push(goalPanel);
         
-        // Start New Game button (left of Shop button)
+        // Start New Game button
         const newGameButton = new Button(900, 10, 140, 40, 'Start New Game', () => {
             if (confirm('Start a new game? All progress will be lost!')) {
                 this.resetGame();
@@ -268,10 +284,9 @@ const Game = {
             hoverBgColor: '#d63031',
             activeBgColor: '#c0392b'
         });
-        
         this.uiElements.push(newGameButton);
         
-        // Help button (?) - positioned next to pause button
+        // Help button (?)
         const helpButton = new Button(340, 10, 40, 30, '?', () => {
             this.helpPanelVisible = !this.helpPanelVisible;
         }, { 
@@ -285,51 +300,40 @@ const Game = {
         
         // Help panel (hidden by default)
         this.helpPanelVisible = false;
-    },
-    
-    // Create mobile cancel button
-    createMobileCancelButton() {
-        if (!this.isMobile && !this.isTouch) return;
         
-        const layout = this.layouts.mobile;
-        
-        this.cancelPlacementButton = new Button(
-            layout.cancelButton.x, layout.cancelButton.y,
-            layout.cancelButton.w, layout.cancelButton.h,
-            'CANCEL',
-            () => {
-                this.cancelPlacement();
-            },
-            {
-                bgColor: '#d63031',
-                hoverBgColor: '#e74c3c',
-                activeBgColor: '#c0392b',
-                borderColor: '#c0392b',
-                textColor: '#ffffff',
-                fontSize: '16px'
-            }
-        );
-        this.cancelPlacementButton.visible = false;
+        // Mobile-specific: Cancel button for placement mode
+        if (this.isMobile || this.isTouch) {
+            this.cancelPlacementButton = new Button(
+                540, 740, 120, 50,
+                'CANCEL',
+                () => this.cancelPlacement(),
+                {
+                    bgColor: '#d63031',
+                    hoverBgColor: '#e74c3c',
+                    activeBgColor: '#c0392b',
+                    borderColor: '#c0392b',
+                    textColor: '#ffffff',
+                    fontSize: '16px'
+                }
+            );
+            this.cancelPlacementButton.visible = false;
+        }
     },
     
     // Device detection
     detectDevice() {
-        // Detect touch capability
         this.isTouch = ('ontouchstart' in window) || 
                        (navigator.maxTouchPoints > 0) ||
                        (navigator.msMaxTouchPoints > 0);
         
-        // Detect mobile by screen size and touch
         const width = window.innerWidth;
         const height = window.innerHeight;
         
         this.isMobile = this.isTouch && (width <= 1024 || height <= 768);
-        
-        // Detect orientation
         this.orientation = width > height ? 'landscape' : 'portrait';
         
         // Set layout mode
-        if (width <= 480 || (this.orientation === 'portrait' && width <= 768)) {
+        if (this.isMobile && this.orientation === 'portrait') {
             this.layoutMode = 'mobile';
         } else if (width <= 1024) {
             this.layoutMode = 'tablet';
@@ -337,288 +341,45 @@ const Game = {
             this.layoutMode = 'desktop';
         }
         
-        this.viewportWidth = width;
-        this.viewportHeight = height;
-    },
-    
-    // Check orientation and show warning on mobile
-    checkOrientation() {
-        if (this.isMobile && this.orientation === 'portrait') {
-            // Show one-time orientation suggestion
-            if (!this.orientationWarningShown) {
-                this.notificationSystem.addNotification('Tip: Rotate to landscape for the best experience!', 'info');
-                this.orientationWarningShown = true;
-            }
-        }
-    },
-    
-    setupCanvas() {
-        // Detect device first
-        this.detectDevice();
-        
-        // Keep internal resolution at 1200x800 for consistent game logic
-        // But scale the display to fit the viewport
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        
-        // Calculate scale to fit viewport
-        this.updateCanvasScale();
-        
-        // Create mobile cancel button if needed
-        this.createMobileCancelButton();
-    },
-    
-    updateCanvasScale() {
-        const container = document.getElementById('gameContainer');
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        
-        // Account for iOS Safari's dynamic viewport
-        const safeHeight = window.innerHeight;
-        const safeWidth = window.innerWidth;
-        
-        const targetWidth = Math.min(containerWidth, safeWidth);
-        const targetHeight = Math.min(containerHeight, safeHeight);
-        
-        const scaleX = targetWidth / this.width;
-        const scaleY = targetHeight / this.height;
-        
-        // Use the smaller scale to maintain aspect ratio
-        // Add padding factor for mobile (95% on desktop, 100% on mobile to maximize space)
-        const paddingFactor = this.isMobile ? 1.0 : 0.95;
-        this.scaleFactor = Math.min(scaleX, scaleY) * paddingFactor;
-        
-        // Apply scale via CSS transform
-        this.canvas.style.transform = `scale(${this.scaleFactor})`;
-        this.canvas.style.transformOrigin = 'top left';
-        
-        // Center the canvas
-        const scaledWidth = this.width * this.scaleFactor;
-        const scaledHeight = this.height * this.scaleFactor;
-        
-        this.canvas.style.position = 'absolute';
-        this.canvas.style.left = `${(targetWidth - scaledWidth) / 2}px`;
-        this.canvas.style.top = `${(targetHeight - scaledHeight) / 2}px`;
-    },
-    
-    // Reposition UI elements based on layout mode
-    repositionUI() {
-        const layout = this.layouts[this.layoutMode];
-        if (!layout) return;
-        
-        // Update button positions based on layout
-        // uiElements order: [moneyButton, genBar, storageBar, consumptionBar, timeButton, 
-        //                    pauseButton, weatherButton, statsPanel, goalPanel, newGameButton, helpButton]
-        
-        // Money/Shop button (index 0)
-        if (this.uiElements[0]) {
-            this.uiElements[0].x = layout.shopButton.x;
-            this.uiElements[0].y = layout.shopButton.y;
-            this.uiElements[0].width = layout.shopButton.w;
-            this.uiElements[0].height = layout.shopButton.h;
-        }
-        
-        // Energy bars (indices 1, 2, 3)
-        for (let i = 0; i < 3; i++) {
-            if (this.uiElements[i + 1]) {
-                this.uiElements[i + 1].x = layout.energyBars.x;
-                this.uiElements[i + 1].y = layout.energyBars.y + (i * layout.energyBars.spacing);
-                this.uiElements[i + 1].width = layout.energyBars.w;
-                this.uiElements[i + 1].height = layout.energyBars.h;
-            }
-        }
-        
-        // Time button (index 4)
-        if (this.uiElements[4]) {
-            this.uiElements[4].x = layout.timeButton.x;
-            this.uiElements[4].y = layout.timeButton.y;
-            this.uiElements[4].width = layout.timeButton.w;
-            this.uiElements[4].height = layout.timeButton.h;
-        }
-        
-        // Pause button (index 5)
-        if (this.uiElements[5]) {
-            this.uiElements[5].x = layout.pauseButton.x;
-            this.uiElements[5].y = layout.pauseButton.y;
-            this.uiElements[5].width = layout.pauseButton.w;
-            this.uiElements[5].height = layout.pauseButton.h;
-        }
-        
-        // Weather button (index 6)
-        if (this.uiElements[6]) {
-            this.uiElements[6].x = layout.weatherButton.x;
-            this.uiElements[6].y = layout.weatherButton.y;
-            this.uiElements[6].width = layout.weatherButton.w;
-            this.uiElements[6].height = layout.weatherButton.h;
-        }
-        
-        // Stats panel (index 7)
-        if (this.uiElements[7]) {
-            this.uiElements[7].x = layout.statsPanel.x;
-            this.uiElements[7].y = layout.statsPanel.y;
-            this.uiElements[7].width = layout.statsPanel.w;
-            this.uiElements[7].height = layout.statsPanel.h;
-        }
-        
-        // Goal panel (index 8)
-        if (this.uiElements[8]) {
-            this.uiElements[8].x = layout.goalPanel.x;
-            this.uiElements[8].y = layout.goalPanel.y;
-            this.uiElements[8].width = layout.goalPanel.w;
-            this.uiElements[8].height = layout.goalPanel.h;
-        }
-        
-        // New Game button (index 9)
-        if (this.uiElements[9]) {
-            this.uiElements[9].x = layout.newGameButton.x;
-            this.uiElements[9].y = layout.newGameButton.y;
-            this.uiElements[9].width = layout.newGameButton.w;
-            this.uiElements[9].height = layout.newGameButton.h;
-        }
-        
-        // Help button (index 10)
-        if (this.uiElements[10]) {
-            this.uiElements[10].x = layout.helpButton.x;
-            this.uiElements[10].y = layout.helpButton.y;
-            this.uiElements[10].width = layout.helpButton.w;
-            this.uiElements[10].height = layout.helpButton.h;
-        }
-        
-        // Shop menu
-        if (this.shopMenu) {
-            this.shopMenu.x = layout.shopMenu.x;
-            this.shopMenu.y = layout.shopMenu.y;
-            this.shopMenu.width = layout.shopMenu.w;
-            this.shopMenu.height = layout.shopMenu.h;
-        }
-        
-        // Store layout for notification rendering
-        this.notificationPosition = layout.notifications;
+        console.log(`Device: ${this.layoutMode}, Touch: ${this.isTouch}, Mobile: ${this.isMobile}`);
     },
     
     setupMouseEvents() {
+        // Mouse click - convert to world coordinates
         this.canvas.addEventListener('click', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            // Calculate scale factor
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
+            // Convert from CSS pixels to logical pixels
+            const scaleX = this.width / rect.width;
+            const scaleY = this.height / rect.height;
             
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const screenX = (e.clientX - rect.left) * scaleX;
+            const screenY = (e.clientY - rect.top) * scaleY;
             
-            // Handle help panel close button (blocks input when visible)
-            if (this.helpPanelVisible && this.helpCloseButton) {
-                if (this.isPointInRect(x, y, this.helpCloseButton)) {
-                    this.helpPanelVisible = false;
-                    return;
-                }
-                // Block all other clicks when help panel is shown
+            // First check UI elements (they're in screen space)
+            if (this.handleUIClick(screenX, screenY)) {
                 return;
             }
             
-            // Handle victory overlay button first (blocks all other input)
-            if (this.victoryOverlay && this.victoryButton) {
-                if (this.isPointInRect(x, y, this.victoryButton)) {
-                    this.victoryOverlay = false;
-                    this.resetGame();
-                    this.notificationSystem.addNotification('New game started!', 'success');
-                    return;
-                }
-                // Block all other clicks when victory overlay is shown
-                return;
-            }
-            
-            // Handle dialog first
-            if (this.dialog && this.dialog.visible) {
-                if (this.dialog.handleClick(x, y)) return;
-            }
-
-            // Handle Placement Click
-            if (this.placementMode) {
-                // Left click to place
-                if (e.button === 0) { 
-                    this.handlePlacement(x, y);
-                    return; 
-                }
-            }
-            
-            // Handle entity selection (not in placement mode)
-            if (!this.placementMode) {
-                // Check if clicking on upgrade/delete buttons
-                if (this.selectedEntity) {
-                    if (this.upgradeButton && this.isPointInRect(x, y, this.upgradeButton)) {
-                        this.upgradeSelectedEntity();
-                        return;
-                    }
-                    if (this.deleteButton && this.isPointInRect(x, y, this.deleteButton)) {
-                        this.deleteSelectedEntity();
-                        return;
-                    }
-                }
-                
-                const entity = this.getEntityAtPosition(x, y);
-                if (entity) {
-                    this.selectEntity(entity.item, entity.type);
-                    return;
-                } else {
-                    // Clicked empty space, deselect
-                    this.deselectEntity();
-                }
-            }
-            
-            // Handle UI elements (reverse order for z-index)
-            for (let i = this.uiElements.length - 1; i >= 0; i--) {
-                const element = this.uiElements[i];
-                if (element.handleClick && element.handleClick(x, y)) {
-                    return;
-                }
-            }
+            // Convert to world coordinates for game objects
+            const worldPos = this.camera.screenToWorld(screenX, screenY);
+            this.handleWorldClick(worldPos.x, worldPos.y);
         });
         
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
+            const scaleX = this.width / rect.width;
+            const scaleY = this.height / rect.height;
             
             this.mouseX = (e.clientX - rect.left) * scaleX;
             this.mouseY = (e.clientY - rect.top) * scaleY;
             
-            // In placement mode, calculate snapped coordinates
+            // In placement mode, calculate snapped world coordinates
             if (this.placementMode) {
-                // Get grid offset from renderer
-                const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
-                const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
-                
-                // Snap to grid
-                const rawX = this.mouseX - offsetX;
-                const rawY = this.mouseY - offsetY;
-                
-                this.placementX = offsetX + Math.round(rawX / this.gridSize) * this.gridSize;
-                this.placementY = offsetY + Math.round(rawY / this.gridSize) * this.gridSize;
-                
-                // Update validity (check bounds)
-                const minX = offsetX;
-                const maxX = offsetX + 600 - this.gridSize; // Adjust for item width if needed
-                const minY = offsetY;
-                const maxY = offsetY + 400 - this.gridSize;
-                
-                let inBounds = (this.placementX >= minX && this.placementX <= maxX && 
-                               this.placementY >= minY && this.placementY <= maxY);
-                               
-                // Check collision if in bounds
-                if (inBounds) {
-                    // Convert screen coords to game world coords for collision check
-                    const gameX = this.placementX - offsetX;
-                    const gameY = this.placementY - offsetY;
-                    
-                    // Simple collision check - radius based
-                    const collision = this.checkCollision(gameX, gameY);
-                    this.placementValid = !collision;
-                } else {
-                    this.placementValid = false;
-                }
+                const worldPos = this.camera.screenToWorld(this.mouseX, this.mouseY);
+                this.updatePlacementPreview(worldPos.x, worldPos.y);
             }
 
+            // Update UI hover states
             this.uiElements.forEach(element => {
                 if (element.handleMouseMove) {
                     element.handleMouseMove(this.mouseX, this.mouseY);
@@ -634,32 +395,29 @@ const Game = {
             }
         });
         
-        // Escape key to cancel placement
+        // Keyboard shortcuts
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.placementMode) {
                 this.cancelPlacement();
             }
             
-            // Delete key to delete selected entity
             if ((e.key === 'Delete' || e.key === 'Backspace') && this.selectedEntity) {
                 this.deleteSelectedEntity();
             }
             
-            // U key to upgrade selected entity
-            if (e.key === 'u' || e.key === 'U') {
-                if (this.selectedEntity) {
-                    this.upgradeSelectedEntity();
-                }
+            if ((e.key === 'u' || e.key === 'U') && this.selectedEntity) {
+                this.upgradeSelectedEntity();
             }
             
             // Cheat key sequence detection
             this.handleCheatKeySequence(e.key);
         });
 
+        // Mouse down/up for button states
         this.canvas.addEventListener('mousedown', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
+            const scaleX = this.width / rect.width;
+            const scaleY = this.height / rect.height;
             
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
@@ -673,8 +431,8 @@ const Game = {
         
         this.canvas.addEventListener('mouseup', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
+            const scaleX = this.width / rect.width;
+            const scaleY = this.height / rect.height;
             
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
@@ -685,200 +443,96 @@ const Game = {
                 }
             });
         });
-        
-        // Touch event support for mobile devices
-        this.setupTouchEvents();
     },
     
-    setupTouchEvents() {
-        // Touch start - begin tracking
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            
-            if (e.touches.length === 1) {
-                const touch = e.touches[0];
-                const coords = this.getTouchCoords(touch);
-                
-                this.touch.active = true;
-                this.touch.startX = coords.x;
-                this.touch.startY = coords.y;
-                this.touch.currentX = coords.x;
-                this.touch.currentY = coords.y;
-                this.touch.startTime = Date.now();
-                this.touch.isDragging = false;
-                
-                // Update mouse position for placement preview
-                this.mouseX = coords.x;
-                this.mouseY = coords.y;
-                
-                // Start long press timer (for entity selection info)
-                this.touch.longPressTimer = setTimeout(() => {
-                    if (this.touch.active && !this.touch.isDragging) {
-                        this.handleLongPress(coords.x, coords.y);
-                    }
-                }, this.touch.longPressTime);
-                
-                // Trigger visual feedback on buttons
-                this.uiElements.forEach(element => {
-                    if (element.handleMouseDown) {
-                        element.handleMouseDown(coords.x, coords.y);
-                    }
-                });
-                
-                // Also check cancel button
-                if (this.cancelPlacementButton && this.cancelPlacementButton.visible) {
-                    if (this.cancelPlacementButton.handleMouseDown) {
-                        this.cancelPlacementButton.handleMouseDown(coords.x, coords.y);
-                    }
-                }
-                
-                // If in placement mode, show preview at touch location
-                if (this.placementMode) {
-                    this.updatePlacementPreview(coords.x, coords.y);
-                }
+    // Handle UI element clicks (screen space)
+    handleUIClick(screenX, screenY) {
+        // Handle help panel close button
+        if (this.helpPanelVisible && this.helpCloseButton) {
+            if (this.isPointInRect(screenX, screenY, this.helpCloseButton)) {
+                this.helpPanelVisible = false;
+                return true;
             }
-        }, { passive: false });
+            return true; // Block all clicks when help panel is shown
+        }
         
-        // Touch move - handle dragging
-        this.canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            
-            if (e.touches.length === 1 && this.touch.active) {
-                const touch = e.touches[0];
-                const coords = this.getTouchCoords(touch);
-                
-                this.touch.currentX = coords.x;
-                this.touch.currentY = coords.y;
-                
-                // Update mouse position
-                this.mouseX = coords.x;
-                this.mouseY = coords.y;
-                
-                // Check if we've moved enough to be considered dragging
-                const dx = coords.x - this.touch.startX;
-                const dy = coords.y - this.touch.startY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > this.touch.dragThreshold) {
-                    this.touch.isDragging = true;
-                    
-                    // Cancel long press if dragging
-                    if (this.touch.longPressTimer) {
-                        clearTimeout(this.touch.longPressTimer);
-                        this.touch.longPressTimer = null;
-                    }
-                }
-                
-                // If in placement mode, update preview position
-                if (this.placementMode) {
-                    this.updatePlacementPreview(coords.x, coords.y);
-                }
-                
-                // Update hover states for UI elements
-                this.uiElements.forEach(element => {
-                    if (element.handleMouseMove) {
-                        element.handleMouseMove(coords.x, coords.y);
-                    }
-                });
+        // Handle victory overlay button
+        if (this.victoryOverlay && this.victoryButton) {
+            if (this.isPointInRect(screenX, screenY, this.victoryButton)) {
+                this.victoryOverlay = false;
+                this.resetGame();
+                this.notificationSystem.addNotification('New game started!', 'success');
+                return true;
             }
-        }, { passive: false });
+            return true; // Block all clicks when victory overlay is shown
+        }
         
-        // Touch end - complete action
-        this.canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            
-            // Cancel long press timer
-            if (this.touch.longPressTimer) {
-                clearTimeout(this.touch.longPressTimer);
-                this.touch.longPressTimer = null;
-            }
-            
-            if (this.touch.active) {
-                const x = this.touch.currentX;
-                const y = this.touch.currentY;
-                
-                // Trigger mouseup on UI elements
-                this.uiElements.forEach(element => {
-                    if (element.handleMouseUp) {
-                        element.handleMouseUp(x, y);
-                    }
-                });
-                
-                // Also check cancel button
-                if (this.cancelPlacementButton && this.cancelPlacementButton.visible) {
-                    if (this.cancelPlacementButton.handleMouseUp) {
-                        this.cancelPlacementButton.handleMouseUp(x, y);
-                    }
-                }
-                
-                // Determine action based on whether it was a tap or drag
-                const touchDuration = Date.now() - this.touch.startTime;
-                
-                if (!this.touch.isDragging && touchDuration < 300) {
-                    // Short tap - treat as click
-                    this.handleTouchClick(x, y);
-                } else if (this.touch.isDragging && this.placementMode) {
-                    // Drag ended in placement mode - try to place
-                    this.handlePlacement(x, y);
-                }
-                
-                // Reset touch state
-                this.touch.active = false;
-                this.touch.isDragging = false;
-            }
-        }, { passive: false });
+        // Handle dialog
+        if (this.dialog && this.dialog.visible) {
+            if (this.dialog.handleClick(screenX, screenY)) return true;
+        }
         
-        // Touch cancel - reset state
-        this.canvas.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
-            
-            if (this.touch.longPressTimer) {
-                clearTimeout(this.touch.longPressTimer);
-                this.touch.longPressTimer = null;
+        // Handle cancel button in placement mode
+        if (this.placementMode && this.cancelPlacementButton && this.cancelPlacementButton.visible) {
+            if (this.cancelPlacementButton.contains(screenX, screenY)) {
+                this.cancelPlacement();
+                return true;
             }
-            
-            this.touch.active = false;
-            this.touch.isDragging = false;
-            
-            // Reset button states
-            this.uiElements.forEach(element => {
-                if (element.handleMouseUp) {
-                    element.handleMouseUp(0, 0);
-                }
-            });
-            
-            if (this.cancelPlacementButton) {
-                if (this.cancelPlacementButton.handleMouseUp) {
-                    this.cancelPlacementButton.handleMouseUp(0, 0);
-                }
+        }
+        
+        // Handle selection panel buttons
+        if (this.selectedEntity) {
+            if (this.upgradeButton && this.isPointInRect(screenX, screenY, this.upgradeButton)) {
+                this.upgradeSelectedEntity();
+                return true;
             }
-        }, { passive: false });
+            if (this.deleteButton && this.isPointInRect(screenX, screenY, this.deleteButton)) {
+                this.deleteSelectedEntity();
+                return true;
+            }
+        }
+        
+        // Handle UI elements (reverse order for z-index)
+        for (let i = this.uiElements.length - 1; i >= 0; i--) {
+            const element = this.uiElements[i];
+            if (element.handleClick && element.handleClick(screenX, screenY)) {
+                return true;
+            }
+        }
+        
+        return false;
     },
     
-    // Helper to get touch coordinates adjusted for canvas scaling
-    getTouchCoords(touch) {
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
+    // Handle world clicks (world space coordinates)
+    handleWorldClick(worldX, worldY) {
+        // Handle placement mode
+        if (this.placementMode) {
+            this.handlePlacement(worldX, worldY);
+            return;
+        }
         
-        return {
-            x: (touch.clientX - rect.left) * scaleX,
-            y: (touch.clientY - rect.top) * scaleY
-        };
+        // Handle entity selection
+        const entity = this.getEntityAtWorldPosition(worldX, worldY);
+        if (entity) {
+            this.selectEntity(entity.item, entity.type);
+        } else {
+            this.deselectEntity();
+        }
     },
     
-    // Update placement preview position (snapped to grid)
-    updatePlacementPreview(x, y) {
+    // Update placement preview position (world coordinates)
+    updatePlacementPreview(worldX, worldY) {
         const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
         const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
         
-        const rawX = x - offsetX;
-        const rawY = y - offsetY;
+        // Snap to grid in world space
+        const rawX = worldX - offsetX;
+        const rawY = worldY - offsetY;
         
         this.placementX = offsetX + Math.round(rawX / this.gridSize) * this.gridSize;
         this.placementY = offsetY + Math.round(rawY / this.gridSize) * this.gridSize;
         
-        // Update validity
+        // Check validity
         const minX = offsetX;
         const maxX = offsetX + 600 - this.gridSize;
         const minY = offsetY;
@@ -897,85 +551,46 @@ const Game = {
         }
     },
     
-    // Handle long press - show entity info
-    handleLongPress(x, y) {
-        if (this.placementMode) return;
+    // Get entity at world position
+    getEntityAtWorldPosition(worldX, worldY) {
+        const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
+        const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
         
-        const entity = this.getEntityAtPosition(x, y);
-        if (entity) {
-            this.selectEntity(entity.item, entity.type);
-        }
-    },
-    
-    handleTouchClick(x, y) {
-        // Handle cancel button first (for mobile placement mode)
-        if (this.placementMode && this.cancelPlacementButton && this.cancelPlacementButton.visible) {
-            if (this.cancelPlacementButton.contains(x, y)) {
-                this.cancelPlacement();
-                return;
+        // Convert to game coordinates
+        const gameX = worldX - offsetX;
+        const gameY = worldY - offsetY;
+        
+        // Hit radius - larger on mobile
+        const hitRadius = (this.isMobile || this.isTouch) ? 60 : 50;
+        
+        // Check solar panels
+        for (let panel of this.gameState.solarPanels) {
+            const dx = panel.x - gameX;
+            const dy = panel.y - gameY;
+            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
+                return { item: panel, type: 'solar' };
             }
         }
         
-        // Handle help panel close button (blocks input when visible)
-        if (this.helpPanelVisible && this.helpCloseButton) {
-            if (this.isPointInRect(x, y, this.helpCloseButton)) {
-                this.helpPanelVisible = false;
-                return;
-            }
-            return;
-        }
-        
-        // Handle victory overlay button
-        if (this.victoryOverlay && this.victoryButton) {
-            if (this.isPointInRect(x, y, this.victoryButton)) {
-                this.victoryOverlay = false;
-                this.resetGame();
-                this.notificationSystem.addNotification('New game started!', 'success');
-                return;
-            }
-            return;
-        }
-        
-        // Handle dialog
-        if (this.dialog && this.dialog.visible) {
-            if (this.dialog.handleClick(x, y)) return;
-        }
-
-        // Handle Placement
-        if (this.placementMode) {
-            this.handlePlacement(x, y);
-            return;
-        }
-        
-        // Handle entity selection
-        if (!this.placementMode) {
-            if (this.selectedEntity) {
-                if (this.upgradeButton && this.isPointInRect(x, y, this.upgradeButton)) {
-                    this.upgradeSelectedEntity();
-                    return;
-                }
-                if (this.deleteButton && this.isPointInRect(x, y, this.deleteButton)) {
-                    this.deleteSelectedEntity();
-                    return;
-                }
-            }
-            
-            const entity = this.getEntityAtPosition(x, y);
-            if (entity) {
-                this.selectEntity(entity.item, entity.type);
-                return;
-            } else {
-                this.deselectEntity();
+        // Check batteries
+        for (let battery of this.gameState.batteries) {
+            const dx = battery.x - gameX;
+            const dy = battery.y - gameY;
+            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
+                return { item: battery, type: 'battery' };
             }
         }
         
-        // Handle UI elements
-        for (let i = this.uiElements.length - 1; i >= 0; i--) {
-            const element = this.uiElements[i];
-            if (element.handleClick && element.handleClick(x, y)) {
-                return;
+        // Check households
+        for (let household of this.gameState.households) {
+            const dx = household.x - gameX;
+            const dy = household.y - gameY;
+            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
+                return { item: household, type: 'household' };
             }
         }
+        
+        return null;
     },
     
     handleCheatKeySequence(key) {
@@ -1103,47 +718,6 @@ const Game = {
     isPointInRect(x, y, rect) {
         return x >= rect.x && x <= rect.x + rect.width &&
                y >= rect.y && y <= rect.y + rect.height;
-    },
-    
-    getEntityAtPosition(x, y) {
-        const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
-        const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
-        
-        // Convert screen coords to game world coords
-        const gameX = x - offsetX;
-        const gameY = y - offsetY;
-        
-        // Larger hit radius on mobile for easier selection
-        const hitRadius = (this.isMobile || this.isTouch) ? 60 : 50;
-        
-        // Check solar panels
-        for (let panel of this.gameState.solarPanels) {
-            const dx = panel.x - gameX;
-            const dy = panel.y - gameY;
-            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
-                return { item: panel, type: 'solar' };
-            }
-        }
-        
-        // Check batteries
-        for (let battery of this.gameState.batteries) {
-            const dx = battery.x - gameX;
-            const dy = battery.y - gameY;
-            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
-                return { item: battery, type: 'battery' };
-            }
-        }
-        
-        // Check households
-        for (let household of this.gameState.households) {
-            const dx = household.x - gameX;
-            const dy = household.y - gameY;
-            if (Math.sqrt(dx*dx + dy*dy) < hitRadius) {
-                return { item: household, type: 'household' };
-            }
-        }
-        
-        return null;
     },
     
     selectEntity(entity, type) {
@@ -1296,12 +870,10 @@ const Game = {
         this.notificationSystem.addNotification(upgradeMessage, 'success');
     },
     
-    handlePlacement(x, y) {
+    handlePlacement(worldX, worldY) {
         if (!this.placementMode || !this.placementItem) return;
         
-        // Use the calculated placement coordinates instead of raw mouse clicks
-        // These are already snapped and stored in placementX/Y
-        
+        // Use the pre-calculated snapped placement coordinates
         if (!this.placementValid) {
             this.notificationSystem.addNotification("Invalid placement location!", 'warning');
             return;
@@ -1310,7 +882,7 @@ const Game = {
         const minX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
         const minY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
         
-        // Convert snapped screen coordinates to game world coordinates
+        // Convert snapped world coordinates to game coordinates
         const gameX = this.placementX - minX;
         const gameY = this.placementY - minY;
 
@@ -1319,24 +891,29 @@ const Game = {
         
         this.notificationSystem.addNotification(`Placed ${this.placementItem.name}!`, 'success');
         
-        // Exit placement mode (don't refund since item was placed)
+        // Exit placement mode
         this.placementMode = false;
         this.placementItem = null;
+        
+        // Hide cancel button
+        if (this.cancelPlacementButton) {
+            this.cancelPlacementButton.visible = false;
+        }
+        
         this.shopMenu.visible = true;
     },
 
     handleResize() {
-        // Re-detect device on resize (handles orientation changes)
+        // Re-detect device
         this.detectDevice();
         
-        // Update canvas scale
-        this.updateCanvasScale();
+        // Re-setup high-DPI canvas
+        this.setupHighDPICanvas();
         
-        // Reposition UI elements for new layout
-        this.repositionUI();
-        
-        // Check orientation on mobile
-        this.checkOrientation();
+        // Update camera viewport
+        if (this.camera) {
+            this.camera.setViewport(this.width, this.height);
+        }
     },
     
     startGameLoop() {
@@ -1358,6 +935,11 @@ const Game = {
     },
     
     update(deltaTime, currentTime) {
+        // Update camera (smooth pan/zoom animations)
+        if (this.camera) {
+            this.camera.update();
+        }
+        
         // Don't update game state if paused
         if (this.gameState && this.gameState.initialized && !this.isPaused) {
             this.gameState.update(deltaTime);
@@ -1378,15 +960,11 @@ const Game = {
             this.dialog.update(currentTime);
         }
 
-        // Check for events and show notifications (limit to 1 per day)
-        // Event notifications are now handled directly by EventSystem.notifyUI()
-        // No need for duplicate notification logic here
-        
         // Check for goal completion and show victory overlay
         if (this.gameState && this.gameState.gameWon && !this.victoryOverlay) {
             this.victoryOverlay = true;
             this.selectedFunFact = this.funFacts[Math.floor(Math.random() * this.funFacts.length)];
-            this.isPaused = true;  // Pause game on victory
+            this.isPaused = true;
             this.victoryShown = true;
         }
     },
@@ -1418,6 +996,9 @@ const Game = {
             this.particleSystem
         );
         
+        // Pass camera to world renderer
+        this.worldRenderer.camera = this.camera;
+        
         // Clear shop menu reference and recreate
         const oldShopMenu = this.shopMenu;
         const shopWasVisible = oldShopMenu ? oldShopMenu.visible : false;
@@ -1438,17 +1019,42 @@ const Game = {
     },
     
     render() {
-        // Clear canvas
+        // Reset context transform for high-DPI
+        this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        
+        // Clear canvas with background
         this.ctx.fillStyle = '#90ee90';
         this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        // Apply camera transform for world rendering
+        if (this.camera) {
+            this.camera.applyTransform(this.ctx);
+        }
         
         // Draw grid and world - pass paused state to control particle emission
         this.worldRenderer.render(this.isPaused);
         
-        // Render UI elements (backgrounds first)
+        // Render placement preview (in world space)
+        if (this.placementMode && this.placementItem) {
+            this.renderPlacementPreview();
+        }
+        
+        // Render entity selection indicator (in world space)
+        if (this.selectedEntity && this.selectedEntityType) {
+            this.renderEntityHighlight();
+        }
+        
+        // Restore camera transform before drawing UI
+        if (this.camera) {
+            this.camera.restoreTransform(this.ctx);
+        }
+        
+        // --- Screen-space UI rendering below ---
+        
+        // Render UI elements
         this.uiElements.forEach(element => element.render(this.ctx));
         
-        // Render game state (text content on top of UI backgrounds)
+        // Render game state (text content on top of UI)
         this.renderGameState();
         
         // Render dialog
@@ -1456,24 +1062,18 @@ const Game = {
             this.dialog.render(this.ctx);
         }
         
-        // Render Placement Preview
-        if (this.placementMode && this.placementItem) {
-            this.renderPlacementPreview();
-            
-            // Render mobile cancel button during placement
-            if (this.cancelPlacementButton && this.cancelPlacementButton.visible) {
-                this.cancelPlacementButton.render(this.ctx);
-            }
+        // Render mobile cancel button during placement
+        if (this.placementMode && this.cancelPlacementButton && this.cancelPlacementButton.visible) {
+            this.cancelPlacementButton.render(this.ctx);
         }
         
-        // Render entity selection UI
+        // Render entity selection UI panel (screen space)
         if (this.selectedEntity && this.selectedEntityType) {
             this.renderSelectionUI();
         }
 
-        // Render notifications - use dynamic position
-        const notifPos = this.notificationPosition || { x: 500, y: 470 };
-        this.notificationSystem.render(this.ctx, notifPos.x, notifPos.y);
+        // Render notifications
+        this.notificationSystem.render(this.ctx, 500, 470);
         
         // Render victory overlay (on top of everything)
         if (this.victoryOverlay) {
@@ -1484,6 +1084,28 @@ const Game = {
         if (this.helpPanelVisible) {
             this.renderHelpPanel();
         }
+        
+        // Debug: Show zoom level on mobile
+        if (this.isMobile && this.camera) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.font = '12px monospace';
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText(`Zoom: ${(this.camera.zoom * 100).toFixed(0)}%`, this.width - 10, this.height - 10);
+        }
+    },
+    
+    // Render highlight around selected entity (in world space)
+    renderEntityHighlight() {
+        const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
+        const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
+        const entityX = offsetX + this.selectedEntity.x;
+        const entityY = offsetY + this.selectedEntity.y;
+        
+        this.ctx.strokeStyle = '#FFD700'; // Gold color
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.arc(entityX + 25, entityY + 25, 35, 0, Math.PI * 2);
+        this.ctx.stroke();
     },
     
     renderGameState() {
@@ -1873,17 +1495,8 @@ const Game = {
         // Store button for click detection
         this.deleteButton = deleteBtn;
         
-        // Draw selection indicator on the entity
-        const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
-        const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
-        const entityX = offsetX + this.selectedEntity.x;
-        const entityY = offsetY + this.selectedEntity.y;
-        
-        this.ctx.strokeStyle = '#FFD700'; // Gold color
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.arc(entityX + 25, entityY + 25, 35, 0, Math.PI * 2);
-        this.ctx.stroke();
+        // NOTE: Entity highlight is now rendered in world space by renderEntityHighlight()
+        // which is called during the world rendering phase (before UI).
     },
     
     renderVictoryOverlay() {
