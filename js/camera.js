@@ -194,10 +194,14 @@ class TouchHandler {
         this.onLongPress = null; // (worldX, worldY) => void
         this.onPanStart = null;
         this.onPanEnd = null;
+        this.onTouchMove = null; // (screenX, screenY) => void - for placement mode
         
         // Long press detection
         this.longPressTimer = null;
         this.longPressTime = 500;
+        
+        // External flag to disable panning (e.g., during placement mode)
+        this.panningDisabled = false;
         
         // Bind event handlers
         this.setupEvents();
@@ -281,8 +285,13 @@ class TouchHandler {
         }
         
         if (this.touches.size === 1) {
-            // Single touch move - pan
+            // Single touch move - pan or placement drag
             const pos = Array.from(this.touches.values())[0];
+            
+            // Notify listener of touch position (for placement mode)
+            if (this.onTouchMove) {
+                this.onTouchMove(pos.x, pos.y);
+            }
             
             // Check if we've moved enough to start panning
             const dx = pos.x - this.tapStartPos.x;
@@ -298,8 +307,10 @@ class TouchHandler {
                     if (this.onPanStart) this.onPanStart();
                 }
                 
-                // Pan camera
-                this.camera.pan(-dx, -dy);
+                // Pan camera (unless panning is disabled, e.g., during placement mode)
+                if (!this.panningDisabled) {
+                    this.camera.pan(-dx, -dy);
+                }
                 this.tapStartPos = { ...pos };
             }
             

@@ -54,3 +54,16 @@ Then visit `http://localhost:8000`
 
 ## Development
 See `AGENTS.md` for coding conventions and `tasks.md` for the development roadmap.
+
+## Changelog
+
+### 2026-01-31 - Mobile UI Improvements
+- **Camera System**: Added pinch-to-zoom and pan controls for mobile devices
+- **Mobile UI Components**: Implemented slide-out drawer for shop, bottom sheet for entity selection
+- **Touch Gestures**: Added touch drag for placement mode, long-press for entity selection
+- **Layout Fixes**: 
+  - Centered goal panel in landscape mode
+  - Moved energy bars to bottom-left to avoid overlapping game grid
+  - Made stats panel visible on mobile with proper background positioning
+  - Repositioned notifications to bottom area aligned with stats
+  - Added affordability check to upgrade button (grays out when insufficient funds)

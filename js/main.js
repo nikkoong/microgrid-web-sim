@@ -186,6 +186,14 @@ const Game = {
                 }
             }
         };
+        
+        // Set up touch move callback for placement mode
+        this.touchHandler.onTouchMove = (screenX, screenY) => {
+            if (this.placementMode) {
+                const worldPos = this.camera.screenToWorld(screenX, screenY);
+                this.updatePlacementPreview(worldPos.x, worldPos.y);
+            }
+        };
     },
     
     initializeSystems() {
@@ -212,19 +220,68 @@ const Game = {
         // Create HUD elements
         this.createHUD();
         
-        // Create shop menu (hidden by default)
-        this.shopMenu = new ShopMenu(900, 100, 280, 400, this.purchaseManager);
-        this.shopMenu.visible = false;
-        this.uiElements.push(this.shopMenu);
+        // Create shop menu based on device type
+        if (this.isMobile || this.isTouch) {
+            this.createMobileUI();
+        } else {
+            // Desktop shop menu
+            this.shopMenu = new ShopMenu(900, 100, 280, 400, this.purchaseManager);
+            this.shopMenu.visible = false;
+            this.uiElements.push(this.shopMenu);
+        }
+    },
+    
+    createMobileUI() {
+        // Create mobile shop drawer (slides from right)
+        this.mobileShopDrawer = new MobileDrawer(280, 800, 'right', 'SHOP');
+        
+        // Add shop content inside drawer
+        // X position is relative to drawer's open position (1200 - 280 = 920)
+        this.mobileShopContent = new MobileShopContent(
+            920 + 10,         // x position when drawer is open
+            60,               // y position (below title)
+            260,              // width
+            this.purchaseManager
+        );
+        this.mobileShopDrawer.addChild(this.mobileShopContent);
+        
+        // Create mobile selection bottom sheet
+        this.mobileSelectionSheet = new MobileBottomSheet(400, 250, 'Selected Entity');
+        this.mobileSelectionContent = new MobileSelectionContent(
+            (1200 - 400) / 2 + 10,  // Centered x + padding
+            800 - 250 + 50,         // At bottom sheet open position + padding for title
+            380,                    // Width
+            180                     // Height (reduced to fit)
+        );
+        this.mobileSelectionContent.setCallbacks(
+            () => this.upgradeSelectedEntity(),
+            () => this.deleteSelectedEntity(),
+            () => {
+                this.mobileSelectionSheet.close();
+                this.deselectEntity();
+            }
+        );
+        this.mobileSelectionSheet.addChild(this.mobileSelectionContent);
+        
+        // These are handled separately from uiElements for proper layering
+        this.mobileShopDrawer.visible = true;
+        this.mobileSelectionSheet.visible = true;
     },
     
     createHUD() {
-        // Shop button (with money display)
+        // Adjust positions based on device type
+        const isMobileLayout = this.isMobile || this.isTouch;
+        
+        // Shop button (with money display) - different behavior on mobile
         const moneyButton = new Button(
-            1050, 10, 140, 40,
+            isMobileLayout ? 1050 : 1050, 10, 140, 40,
             'SHOP - $1000',
             () => {
-                this.shopMenu.visible = !this.shopMenu.visible;
+                if (isMobileLayout && this.mobileShopDrawer) {
+                    this.mobileShopDrawer.toggle();
+                } else if (this.shopMenu) {
+                    this.shopMenu.visible = !this.shopMenu.visible;
+                }
             },
             { 
                 bgColor: '#00b894', 
@@ -236,10 +293,17 @@ const Game = {
         );
         this.uiElements.push(moneyButton);
         
-        // Energy bars
-        const generationBar = new EnergyBar(20, 450, 300, 30, 50, 0, '#1e90ff', 'Generation');
-        const storageBar = new EnergyBar(20, 490, 300, 30, 100, 0, '#00ff00', 'Storage');
-        const consumptionBar = new EnergyBar(20, 530, 300, 30, 50, 0, '#ff6b6b', 'Consumption');
+        // Energy bars - on mobile: bottom-left, vertical, outside the grid area
+        // On desktop: left side middle area
+        const barX = 20;
+        const barY = isMobileLayout ? 640 : 450;  // Mobile: near bottom, Desktop: middle
+        const barWidth = isMobileLayout ? 180 : 300;
+        const barHeight = isMobileLayout ? 22 : 30;
+        const barSpacing = isMobileLayout ? 28 : 40;
+        
+        const generationBar = new EnergyBar(barX, barY, barWidth, barHeight, 50, 0, '#1e90ff', 'Gen');
+        const storageBar = new EnergyBar(barX, barY + barSpacing, barWidth, barHeight, 100, 0, '#00ff00', 'Stor');
+        const consumptionBar = new EnergyBar(barX, barY + barSpacing * 2, barWidth, barHeight, 50, 0, '#ff6b6b', 'Use');
         
         this.uiElements.push(generationBar, storageBar, consumptionBar);
         
@@ -264,15 +328,26 @@ const Game = {
         const weatherButton = new Button(20, 50, 300, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: '#000000' });
         this.uiElements.push(weatherButton);
         
-        // Stats panel
-        const statsPanel = new Panel(20, 580, 300, 230, 'Grid Statistics');
+        // Stats panel - visible on both mobile and desktop, repositioned for mobile
+        // Mobile: bottom-left area (below energy bars would overlap, so put it to the right of bars)
+        // Desktop: bottom-left
+        const statsPanelX = isMobileLayout ? 210 : 20;
+        const statsPanelY = isMobileLayout ? 580 : 580;
+        const statsPanelWidth = isMobileLayout ? 280 : 300;
+        const statsPanelHeight = isMobileLayout ? 210 : 230;
+        const statsPanel = new Panel(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight, 'Grid Statistics');
+        statsPanel.visible = true;  // Always visible now
         this.uiElements.push(statsPanel);
         
-        // Goal panel
-        const goalPanel = new Panel(400, 10, 400, 110, 'Current Goal');
+        // Goal panel - centered on mobile landscape, fixed position on desktop
+        const goalWidth = isMobileLayout ? 400 : 400;
+        const goalHeight = isMobileLayout ? 80 : 110;
+        const goalX = isMobileLayout ? (this.width - goalWidth) / 2 : 400;  // Center horizontally on mobile
+        const goalY = isMobileLayout ? 50 : 10;
+        const goalPanel = new Panel(goalX, goalY, goalWidth, goalHeight, 'Current Goal');
         this.uiElements.push(goalPanel);
         
-        // Start New Game button
+        // Start New Game button - hide on mobile (access via menu instead)
         const newGameButton = new Button(900, 10, 140, 40, 'Start New Game', () => {
             if (confirm('Start a new game? All progress will be lost!')) {
                 this.resetGame();
@@ -284,6 +359,7 @@ const Game = {
             hoverBgColor: '#d63031',
             activeBgColor: '#c0392b'
         });
+        newGameButton.visible = !isMobileLayout;
         this.uiElements.push(newGameButton);
         
         // Help button (?)
@@ -472,6 +548,25 @@ const Game = {
             if (this.dialog.handleClick(screenX, screenY)) return true;
         }
         
+        // Handle mobile UI elements first (they're on top)
+        if (this.isMobile || this.isTouch) {
+            // Handle mobile shop drawer
+            if (this.mobileShopDrawer && this.mobileShopDrawer.handleClick(screenX, screenY)) {
+                return true;
+            }
+            
+            // Handle mobile selection sheet
+            if (this.mobileSelectionSheet && this.selectedEntity) {
+                if (this.mobileSelectionSheet.handleClick(screenX, screenY)) {
+                    return true;
+                }
+                // Also check selection content buttons
+                if (this.mobileSelectionContent && this.mobileSelectionContent.handleClick(screenX, screenY)) {
+                    return true;
+                }
+            }
+        }
+        
         // Handle cancel button in placement mode
         if (this.placementMode && this.cancelPlacementButton && this.cancelPlacementButton.visible) {
             if (this.cancelPlacementButton.contains(screenX, screenY)) {
@@ -480,8 +575,8 @@ const Game = {
             }
         }
         
-        // Handle selection panel buttons
-        if (this.selectedEntity) {
+        // Handle selection panel buttons (desktop only)
+        if (this.selectedEntity && !(this.isMobile || this.isTouch)) {
             if (this.upgradeButton && this.isPointInRect(screenX, screenY, this.upgradeButton)) {
                 this.upgradeSelectedEntity();
                 return true;
@@ -661,6 +756,11 @@ const Game = {
         this.placementItem = equipment;
         this.placementValid = true;
         
+        // Disable camera panning during placement on mobile
+        if (this.touchHandler) {
+            this.touchHandler.panningDisabled = true;
+        }
+        
         if (this.shopMenu) {
             this.shopMenu.visible = false;
         }
@@ -687,6 +787,11 @@ const Game = {
         
         this.placementMode = false;
         this.placementItem = null;
+        
+        // Re-enable camera panning
+        if (this.touchHandler) {
+            this.touchHandler.panningDisabled = false;
+        }
         
         // Hide cancel button
         if (this.cancelPlacementButton) {
@@ -727,6 +832,11 @@ const Game = {
         // Close shop menu when selecting entity
         if (this.shopMenu) {
             this.shopMenu.visible = false;
+        }
+        
+        // Close mobile shop drawer when selecting entity
+        if (this.mobileShopDrawer && this.mobileShopDrawer.isOpen) {
+            this.mobileShopDrawer.close();
         }
     },
     
@@ -895,12 +1005,20 @@ const Game = {
         this.placementMode = false;
         this.placementItem = null;
         
+        // Re-enable camera panning
+        if (this.touchHandler) {
+            this.touchHandler.panningDisabled = false;
+        }
+        
         // Hide cancel button
         if (this.cancelPlacementButton) {
             this.cancelPlacementButton.visible = false;
         }
         
-        this.shopMenu.visible = true;
+        // Show shop menu (desktop only)
+        if (this.shopMenu) {
+            this.shopMenu.visible = true;
+        }
     },
 
     handleResize() {
@@ -951,9 +1069,19 @@ const Game = {
         }
         this.notificationSystem.update(currentTime);
 
-        // Update shop menu affordability
+        // Update shop menu affordability (desktop)
         if (this.shopMenu && this.shopMenu.updateAffordability) {
             this.shopMenu.updateAffordability();
+        }
+        
+        // Update mobile shop content affordability
+        if (this.mobileShopContent && this.mobileShopContent.updateAffordability) {
+            this.mobileShopContent.updateAffordability();
+        }
+        
+        // Update mobile selection content
+        if (this.mobileSelectionContent && this.selectedEntity) {
+            this.mobileSelectionContent.setEntity(this.selectedEntity, this.selectedEntityType);
         }
 
         if (this.dialog && this.dialog.visible) {
@@ -999,20 +1127,37 @@ const Game = {
         // Pass camera to world renderer
         this.worldRenderer.camera = this.camera;
         
-        // Clear shop menu reference and recreate
-        const oldShopMenu = this.shopMenu;
-        const shopWasVisible = oldShopMenu ? oldShopMenu.visible : false;
-        
-        // Remove old shop menu from UI elements
-        const shopIndex = this.uiElements.indexOf(oldShopMenu);
-        if (shopIndex > -1) {
-            this.uiElements.splice(shopIndex, 1);
+        // Recreate shop menu based on device type
+        if (this.isMobile || this.isTouch) {
+            // Update mobile shop content with new purchase manager
+            if (this.mobileShopContent) {
+                this.mobileShopContent.purchaseManager = this.purchaseManager;
+                this.mobileShopContent.setupUI();  // Recreate buttons
+            }
+            // Close mobile drawer
+            if (this.mobileShopDrawer) {
+                this.mobileShopDrawer.close();
+            }
+            // Close mobile selection sheet
+            if (this.mobileSelectionSheet) {
+                this.mobileSelectionSheet.close();
+            }
+        } else {
+            // Desktop: Clear shop menu reference and recreate
+            const oldShopMenu = this.shopMenu;
+            const shopWasVisible = oldShopMenu ? oldShopMenu.visible : false;
+            
+            // Remove old shop menu from UI elements
+            const shopIndex = this.uiElements.indexOf(oldShopMenu);
+            if (shopIndex > -1) {
+                this.uiElements.splice(shopIndex, 1);
+            }
+            
+            // Create new shop menu
+            this.shopMenu = new ShopMenu(900, 100, 280, 400, this.purchaseManager);
+            this.shopMenu.visible = shopWasVisible;
+            this.uiElements.push(this.shopMenu);
         }
-        
-        // Create new shop menu
-        this.shopMenu = new ShopMenu(900, 100, 280, 400, this.purchaseManager);
-        this.shopMenu.visible = shopWasVisible;
-        this.uiElements.push(this.shopMenu);
         
         // Clear notifications
         this.notificationSystem.notifications = [];
@@ -1067,13 +1212,38 @@ const Game = {
             this.cancelPlacementButton.render(this.ctx);
         }
         
-        // Render entity selection UI panel (screen space)
-        if (this.selectedEntity && this.selectedEntityType) {
+        // Render entity selection UI panel (screen space) - desktop only
+        if (this.selectedEntity && this.selectedEntityType && !(this.isMobile || this.isTouch)) {
             this.renderSelectionUI();
         }
 
-        // Render notifications
-        this.notificationSystem.render(this.ctx, 500, 470);
+        // Render notifications - position adjusted for mobile
+        // On mobile: align top edge with stats panel area (Y ~580)
+        // On desktop: middle area
+        const notifX = (this.isMobile || this.isTouch) ? 500 : 500;
+        const notifY = (this.isMobile || this.isTouch) ? 580 : 470;
+        this.notificationSystem.render(this.ctx, notifX, notifY);
+        
+        // Render mobile UI elements (on top of regular UI)
+        if (this.isMobile || this.isTouch) {
+            // Render mobile shop drawer
+            if (this.mobileShopDrawer) {
+                this.mobileShopDrawer.render(this.ctx);
+            }
+            
+            // Render mobile selection sheet when entity is selected
+            if (this.mobileSelectionSheet && this.selectedEntity) {
+                if (!this.mobileSelectionSheet.isOpen) {
+                    this.mobileSelectionSheet.open();
+                }
+                this.mobileSelectionSheet.render(this.ctx);
+            } else if (this.mobileSelectionSheet && !this.selectedEntity) {
+                if (this.mobileSelectionSheet.isOpen) {
+                    this.mobileSelectionSheet.close();
+                }
+                this.mobileSelectionSheet.render(this.ctx);  // Render to animate close
+            }
+        }
         
         // Render victory overlay (on top of everything)
         if (this.victoryOverlay) {
@@ -1169,7 +1339,7 @@ const Game = {
         
         // Update stats panel
         const statsPanel = this.uiElements[7];
-        if (statsPanel) {
+        if (statsPanel && statsPanel.visible) {
             // Calculate average satisfaction
             const avgSatisfaction = gs.households.length > 0 
                 ? gs.households.reduce((sum, h) => sum + h.satisfaction, 0) / gs.households.length
