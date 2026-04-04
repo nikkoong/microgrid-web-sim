@@ -3,7 +3,7 @@
 ## Overview
 The Solar Microgrid Management Game is a browser-based simulation where you manage a renewable energy microgrid. Your goal is to balance energy generation, storage, and consumption while keeping your community powered through changing weather conditions and crisis events.
 
-The game is built with vanilla HTML5 Canvas and JavaScript, featuring a Pokemon-inspired visual style and crisis-driven gameplay.
+![Game Play](image.png)
 
 ## Gameplay & Mechanics
 
