@@ -3,6 +3,8 @@
 ## Overview
 The Solar Microgrid Management Game is a browser-based simulation where you manage a renewable energy microgrid. Your goal is to balance energy generation, storage, and consumption while keeping your community powered through changing weather conditions and crisis events.
 
+[Play at https://solarmicrogrid.vercel.app/](https://solarmicrogrid.vercel.app/)
+
 ![Game Play](image.png)
 
 ## Gameplay & Mechanics
