@@ -188,6 +188,10 @@ class PurchaseManager {
             return { success: false, message: 'Cannot purchase this item!' };
         }
 
+        if (this.gameState.isEquipmentLocked && this.gameState.isEquipmentLocked(equipment)) {
+            return { success: false, message: 'Research required to unlock this item!' };
+        }
+
         this.gameState.money -= equipment.cost;
         this.addEquipment(equipment, x, y);
 
@@ -587,10 +591,12 @@ class ShopMenu extends Panel {
             }
             
             const canAfford = currentMoney >= eq.cost;
-            
+            const locked = this.purchaseManager.gameState.isEquipmentLocked &&
+                this.purchaseManager.gameState.isEquipmentLocked(eq);
+
             // Adjust button height for items with special abilities
             const buttonHeight = eq.special ? 70 : 60;
-            
+
             const button = new Button(
                 this.x + 10,
                 this.y + 80 + index * 75,  // Increased spacing for taller buttons
@@ -620,7 +626,7 @@ class ShopMenu extends Panel {
             // Store equipment reference and cost for affordability updates and tooltips
             button.equipmentCost = eq.cost;
             button.equipment = eq;  // Store full equipment data for special ability rendering
-            button.setDisabled(!canAfford);
+            button.setDisabled(locked || !canAfford);
             
             this.buttons.push(button);
             this.equipmentButtons.push(button);
@@ -637,7 +643,9 @@ class ShopMenu extends Panel {
         this.equipmentButtons.forEach(button => {
             if (button.equipmentCost !== undefined) {
                 const canAfford = currentMoney >= button.equipmentCost;
-                button.setDisabled(!canAfford);
+                const locked = this.purchaseManager.gameState.isEquipmentLocked &&
+                    this.purchaseManager.gameState.isEquipmentLocked(button.equipment);
+                button.setDisabled(locked || !canAfford);
             }
         });
     }

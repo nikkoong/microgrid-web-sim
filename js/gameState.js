@@ -600,6 +600,35 @@ class GameState {
     getResearchNode(branch, id) {
         return this.research[branch].find(n => n.id === id) || null;
     }
+
+    isResearchUnlocked(branch, id) {
+        const node = this.getResearchNode(branch, id);
+        return !!(node && node.unlocked);
+    }
+
+    // Map an equipment catalog item to whether it's research-locked.
+    // Solar/battery items: id like 'solar_tier2'/'battery_tier2' (no separate tier field).
+    // Household items: carry a 'tier' field like 'cabin'/'family'.
+    isEquipmentLocked(equipment) {
+        const type = equipment.type;
+        let branch, tierKey;
+
+        if (type === 'solar_panel' || type === 'battery') {
+            branch = type === 'solar_panel' ? 'solar' : 'storage';
+            const m = (equipment.id || '').match(/_(tier\d+)$/);
+            tierKey = m ? m[1] : 'tier1';
+            if (tierKey === 'tier1') return false; // base always available
+            return !this.isResearchUnlocked(branch, (branch === 'solar' ? 'solar_' : 'stor_') + tierKey);
+        }
+
+        if (type === 'household') {
+            tierKey = equipment.tier || 'cabin';
+            if (tierKey === 'cabin') return false; // base always available
+            return !this.isResearchUnlocked('buildings', 'bld_' + tierKey);
+        }
+
+        return false;
+    }
     
     getGoalProgress() {
         const currentGoal = this.getCurrentGoal();
