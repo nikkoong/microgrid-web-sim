@@ -13,8 +13,8 @@ html, body {
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #2b5aa0;
+    font-family: 'Press Start 2P', monospace;
+    background-color: #0d0f0a;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
@@ -35,16 +35,19 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    background: linear-gradient(135deg, #87ceeb 0%, #98fb98 100%);
+    background: radial-gradient(circle at center, #101710 0%, #0d0f0a 100%);
     /* iOS safe area padding */
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #gameCanvas {
-    border: 4px solid #4a4a4a;
+    border: 4px solid #33ff66;
     border-radius: 8px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-    background-color: #90ee90;
+    box-shadow:
+        0 0 16px rgba(51, 255, 102, 0.4),
+        0 0 32px rgba(51, 255, 102, 0.1),
+        inset 0 0 8px rgba(0, 0, 0, 0.5);
+    background-color: #101710;
     /* Canvas handles its own touch gestures - prevent browser handling */
     touch-action: none;
     /* Crisp pixel rendering for high-DPI */
@@ -108,36 +111,4 @@ body {
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
     }
-}
-
-/* Pokemon-style UI Elements (for potential HTML overlays) */
-.pokemon-dialog {
-    position: absolute;
-    background-color: #f5f5dc;
-    border: 3px solid #4a4a4a;
-    border-radius: 8px;
-    padding: 16px;
-    font-family: monospace;
-    font-size: 14px;
-    color: #2b2b2b;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.pokemon-button {
-    background-color: #ff6b6b;
-    border: 2px solid #d63031;
-    border-radius: 4px;
-    color: white;
-    font-weight: bold;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-family: monospace;
-}
-
-.pokemon-button:hover {
-    background-color: #ee5a52;
-}
-
-.pokemon-button:active {
-    background-color: #d63031;
 }
