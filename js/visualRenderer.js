@@ -559,9 +559,9 @@ class WorldRenderer {
     // Draw a gold border around tier4/elite equipment
     drawGoldBorder(x, y, width, height) {
         this.ctx.save();
-        this.ctx.strokeStyle = '#ffd700';  // Gold color
+        this.ctx.strokeStyle = Theme.colors.gold;
         this.ctx.lineWidth = 3;
-        this.ctx.shadowColor = '#ffd700';
+        this.ctx.shadowColor = Theme.colors.gold;
         this.ctx.shadowBlur = 8;
         this.ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
         this.ctx.restore();
@@ -570,10 +570,10 @@ class WorldRenderer {
     // Draw a colored status indicator dot
     drawStatusDot(x, y, severity) {
         const colors = {
-            high: '#d63031',    // Red
-            medium: '#fdcb6e',  // Yellow
-            low: '#74b9ff',     // Blue
-            info: '#74b9ff'     // Blue
+            high: Theme.colors.red,
+            medium: Theme.colors.amber,
+            low: Theme.colors.cyan,
+            info: Theme.colors.cyan
         };
         const color = colors[severity] || colors.info;
         
@@ -600,7 +600,7 @@ class WorldRenderer {
     drawEntityLabels() {
         if (!this.gameState) return;
 
-        this.ctx.font = '10px monospace';
+        this.ctx.font = Theme.font(10);
         this.ctx.textAlign = 'center';
 
         // Solar panel labels
@@ -608,7 +608,7 @@ class WorldRenderer {
             const x = this.offsetX + panel.x + 30;
             const y = this.offsetY + panel.y + 55;
             const text = `${panel.capacity}kW`;
-            this.drawLabelWithBackground(x, y, text, '#000000');
+            this.drawLabelWithBackground(x, y, text, Theme.colors.textBright);
         });
 
         // Battery labels
@@ -617,7 +617,7 @@ class WorldRenderer {
             const y = this.offsetY + battery.y + 75;
             const chargePercent = (battery.charge / battery.capacity * 100).toFixed(0);
             const text = `${chargePercent}%`;
-            this.drawLabelWithBackground(x, y, text, '#000000');
+            this.drawLabelWithBackground(x, y, text, Theme.colors.textBright);
         });
 
         // Household labels
@@ -625,7 +625,7 @@ class WorldRenderer {
             const x = this.offsetX + household.x + 25;
             const y = this.offsetY + household.y + 55;
             const satisfaction = household.satisfaction * 100;
-            const satisfactionColor = satisfaction > 70 ? '#00aa00' : satisfaction > 40 ? '#cc9900' : '#cc0000';
+            const satisfactionColor = satisfaction > 70 ? Theme.colors.green : satisfaction > 40 ? Theme.colors.amber : Theme.colors.red;
             const text = `${satisfaction.toFixed(0)}%`;
             this.drawLabelWithBackground(x, y, text, satisfactionColor);
         });
@@ -639,7 +639,7 @@ class WorldRenderer {
         const padding = 3;
 
         // Draw semi-transparent background
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.fillStyle = Theme.rgba(Theme.colors.panelBgAlt, 0.85);
         this.ctx.fillRect(
             x - textWidth / 2 - padding,
             y - textHeight - padding + 2,
@@ -648,7 +648,7 @@ class WorldRenderer {
         );
 
         // Draw border
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        this.ctx.strokeStyle = Theme.colors.greenFaint;
         this.ctx.lineWidth = 1;
         this.ctx.strokeRect(
             x - textWidth / 2 - padding,
