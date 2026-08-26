@@ -114,7 +114,7 @@ Game.gameState.households[0].satisfaction = 0.9;
 Game.gameState.lastIncomeTime = Game.gameState.time - 1;
 Game.gameState.time += 0.1; // trigger income tick through game loop
 // after ~1s: Game.gameState.researchPoints should have increased
-Game.gameState.researchPoints.length >= 0
+Game.gameState.researchPoints  // > 0
 ```
 
 - [ ] **Step 5: Commit**
