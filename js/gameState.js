@@ -621,22 +621,20 @@ class GameState {
         };
 
         // Corporate + net-zero goal: corporate count contribution + surplus (clamped 0..1)
+        // Simple shape: current = corporate count, target = required corporate, percentage blends surplus.
         if (currentGoal.requireNetZero) {
             const corpCount = this.households.filter(h =>
                 h.tier === 'corporate' && h.satisfaction >= 0.85
             ).length;
-            const corpTarget = currentGoal.requireCorporate || 0;
-            const corpProgress = corpTarget > 0 ? Math.min(1, corpCount / corpTarget) : 1;
+            const corpTarget = (currentGoal.requireCorporate || 0) > 0 ? currentGoal.requireCorporate : 1;
+            const corpProgress = Math.min(1, corpCount / corpTarget);
             const surplusProgress = this.energy.surplus >= 0 ? 1 : 0;
             const percentage = ((corpProgress + surplusProgress) / 2) * 100;
             return {
                 current: corpCount,
                 target: corpTarget,
                 percentage,
-                detailed: {
-                    corporate: { current: corpCount, target: corpTarget },
-                    surplus: { value: this.energy.surplus, met: this.energy.surplus >= 0 }
-                }
+                detailed: null
             };
         }
         // Research-based goal: progress is 0 or 1 based on node unlocked.
@@ -657,7 +655,7 @@ class GameState {
                     current: count,
                     target: currentGoal.target,
                     percentage: ((researchMet ? 1 : 0) + countRatio) / 2 * 100,
-                    detailed: { research: { met: researchMet }, homes: { current: count, target: currentGoal.target } }
+                    detailed: null
                 };
             }
             return { current: researchMet ? 1 : 0, target: 1, percentage: researchMet ? 100 : 0, detailed: null };
