@@ -239,11 +239,13 @@ class GameState {
             }
 
             if (totalRP > 0) {
-                this.researchPoints += totalRP;
+                // RP growth cut by 35% (×0.65) for balance
+                const rpGained = totalRP * 0.65;
+                this.researchPoints += rpGained;
                 if (window.Game && window.Game.worldRenderer) {
                     window.Game.worldRenderer.spawnFloatText(
                         this.households[0].x, this.households[0].y - 10,
-                        `+${totalRP} RP`, Theme.colors.cyan
+                        `+${rpGained.toFixed(1)} RP`, Theme.colors.cyan
                     );
                 }
             }

@@ -534,7 +534,7 @@ const Game = {
         const tabH = 30;
         const half = (bp.width) / 2;
         const money = this.gameState ? this.gameState.money.toFixed(0) : 0;
-        const rp = this.gameState ? this.gameState.researchPoints : 0;
+        const rp = this.gameState ? Math.floor(this.gameState.researchPoints) : 0;
 
         this.shopTabRects = {
             shop: { x: bp.x, y: bp.y, width: half - 2, height: tabH },
