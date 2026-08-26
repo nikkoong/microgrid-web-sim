@@ -143,5 +143,13 @@ window.Theme = {
             case 'gold': return this.colors.gold;
             default: return this.colors.cyan;
         }
+    },
+
+    // Build an rgba() string from a #RRGGBB hex color + alpha
+    rgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 };

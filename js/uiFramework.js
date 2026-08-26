@@ -461,7 +461,7 @@ class MobileDrawer extends UIElement {
         this.openX = edge === 'right' ? 1200 - width : 0;
         
         this.style = {
-            bgColor: 'rgba(13, 15, 10, 0.95)',
+            bgColor: Theme.rgba(Theme.colors.bgBase, 0.95),
             borderColor: Theme.colors.greenFaint,
             titleColor: Theme.colors.textBright,
             handleColor: Theme.colors.purple
@@ -637,7 +637,7 @@ class MobileBottomSheet extends UIElement {
         this.openY = 800 - height;
         
         this.style = {
-            bgColor: 'rgba(13, 15, 10, 0.98)',
+            bgColor: Theme.rgba(Theme.colors.bgBase, 0.98),
             borderColor: Theme.colors.greenFaint,
             titleColor: Theme.colors.textBright,
             handleColor: Theme.colors.greenDim
