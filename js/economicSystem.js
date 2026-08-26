@@ -363,11 +363,11 @@ class ShopMenu extends Panel {
                 btn.text,
                 () => this.setCategory(btn.category),
                 {
-                    bgColor: '#d4c4a8',      // Tan
-                    hoverBgColor: '#c4b498',  // Darker tan on hover
-                    activeBgColor: '#b4a488', // Even darker when clicked
-                    borderColor: '#4a4a4a',   // Dark border
-                    textColor: '#2b2b2b',     // Black text
+                    bgColor: Theme.colors.panelBg,
+                    hoverBgColor: Theme.colors.panelBgAlt,
+                    activeBgColor: Theme.colors.greenFaint,
+                    borderColor: Theme.colors.greenFaint,
+                    textColor: Theme.colors.textBright,
                     fontSize: '12px'
                 }
             );
@@ -396,7 +396,7 @@ class ShopMenu extends Panel {
         this.categoryButtons.forEach(button => {
             if (button.category === this.currentCategory && button.visible) {
                 // Draw shadow effect (bottom border accent)
-                ctx.fillStyle = '#2b2b2b';  // Dark shadow color
+                ctx.fillStyle = Theme.colors.bgBase;  // Shadow color
                 ctx.fillRect(button.x, button.y + button.height - 4, button.width, 4);
                 
                 // Add subtle glow/shadow around the button
@@ -406,7 +406,7 @@ class ShopMenu extends Panel {
                 ctx.shadowOffsetY = 2;
                 
                 // Redraw button background with shadow
-                ctx.fillStyle = '#c4b498';  // Slightly darker for selected
+                ctx.fillStyle = Theme.colors.panelBgAlt;  // Slightly darker for selected
                 ctx.fillRect(button.x + 1, button.y + 1, button.width - 2, button.height - 5);
                 
                 // Reset shadow
@@ -416,8 +416,8 @@ class ShopMenu extends Panel {
                 ctx.shadowOffsetY = 0;
                 
                 // Redraw the text on selected button
-                ctx.fillStyle = '#2b2b2b';
-                ctx.font = 'bold 12px monospace';
+                ctx.fillStyle = Theme.colors.textBright;
+                ctx.font = Theme.font(12);
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(button.text, button.x + button.width / 2, button.y + button.height / 2 - 2);
@@ -432,19 +432,19 @@ class ShopMenu extends Panel {
                 const labelY = button.y + button.height - 18;
                 
                 // Measure label width
-                ctx.font = 'bold 9px monospace';
+                ctx.font = Theme.font(9);
                 const labelWidth = ctx.measureText(special.name).width + 8;
                 
                 // Draw gold label background
-                ctx.fillStyle = '#ffd700';
+                ctx.fillStyle = Theme.colors.gold;
                 ctx.fillRect(labelX, labelY, labelWidth, 14);
                 ctx.strokeStyle = '#b8860b';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(labelX, labelY, labelWidth, 14);
                 
                 // Draw label text
-                ctx.fillStyle = '#2b2b2b';
-                ctx.font = 'bold 9px monospace';
+                ctx.fillStyle = Theme.colors.bgBase;
+                ctx.font = Theme.font(9);
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(special.name, labelX + 4, labelY + 7);
@@ -469,7 +469,7 @@ class ShopMenu extends Panel {
         const { text, x, y } = data;
         
         // Measure text for tooltip sizing
-        ctx.font = '10px monospace';
+        ctx.font = Theme.font(10);
         const lines = this.wrapTooltipText(ctx, text, 180);
         const lineHeight = 14;
         const padding = 8;
@@ -486,17 +486,17 @@ class ShopMenu extends Panel {
         if (tooltipY + tooltipHeight > 790) tooltipY = 790 - tooltipHeight;
         
         // Draw tooltip background
-        ctx.fillStyle = 'rgba(45, 52, 54, 0.95)';
+        ctx.fillStyle = Theme.rgba(Theme.colors.bgBase, 0.95);
         ctx.fillRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
         
         // Draw gold border
-        ctx.strokeStyle = '#ffd700';
+        ctx.strokeStyle = Theme.colors.gold;
         ctx.lineWidth = 2;
         ctx.strokeRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
         
         // Draw tooltip text
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px monospace';
+        ctx.fillStyle = Theme.colors.textBright;
+        ctx.font = Theme.font(10);
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         lines.forEach((line, index) => {
@@ -595,14 +595,14 @@ class ShopMenu extends Panel {
                     }
                 },
                 {
-                    bgColor: eq.special ? '#e8dcc8' : '#d4c4a8',  // Slightly lighter for special items
-                    hoverBgColor: '#c4b498',       // Darker tan on hover
-                    activeBgColor: '#b4a488',     // Even darker when clicked
-                    borderColor: eq.special ? '#ffd700' : '#4a4a4a',  // Gold border for special items
-                    textColor: '#2b2b2b',         // Black text
-                    disabledBgColor: '#c0c0c0',   // Gray when disabled
-                    disabledTextColor: '#888888', // Gray text when disabled
-                    disabledBorderColor: '#999999',
+                    bgColor: eq.special ? Theme.colors.panelBgAlt : Theme.colors.panelBg,
+                    hoverBgColor: Theme.colors.panelBgAlt,
+                    activeBgColor: Theme.colors.greenFaint,
+                    borderColor: eq.special ? Theme.colors.gold : Theme.colors.greenFaint,
+                    textColor: Theme.colors.textBright,
+                    disabledBgColor: Theme.colors.panelBgAlt,
+                    disabledTextColor: Theme.colors.textDim,
+                    disabledBorderColor: Theme.colors.greenFaint,
                     fontSize: '11px'
                 }
             );

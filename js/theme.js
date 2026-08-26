@@ -98,8 +98,15 @@ window.Theme = {
         let glow = null;
 
         if (!disabled) {
-            if (pressed) { bg = this.colors.greenDark; border = this.colors.green; glow = this.colors.green; }
-            else if (hover) { bg = this.colors.panelBg; border = this.colors.greenDim; glow = this.colors.greenDim; }
+            if (pressed) {
+                glow = this.colors.green;
+                if (!opts.bgColor) bg = this.colors.greenDark;
+                if (!opts.borderColor) border = this.colors.green;
+            } else if (hover) {
+                glow = this.colors.greenDim;
+                if (!opts.bgColor) bg = this.colors.panelBg;
+                if (!opts.borderColor) border = this.colors.greenDim;
+            }
         }
 
         // Bevel (inverted when pressed = sunken)
