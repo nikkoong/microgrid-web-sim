@@ -78,6 +78,28 @@ class GameState {
         ];
         this.currentGoalIndex = 0;
         this.gameWon = false;
+
+        // Research Points currency
+        this.researchPoints = 0;
+
+        // Tech tree: each branch is a sequential node chain. unlocked=false except the first tier base.
+        this.research = {
+            solar: [
+                { id: 'solar_t2', name: 'Advanced Cells', cost: 15, unlocked: false },
+                { id: 'solar_t3', name: 'Premium Photovoltaic', cost: 45, unlocked: false },
+                { id: 'solar_t4', name: 'Elite Array', cost: 110, unlocked: false }
+            ],
+            storage: [
+                { id: 'stor_t2', name: 'Deep-Cycle Packs', cost: 12, unlocked: false },
+                { id: 'stor_t3', name: 'High-Capacity Bank', cost: 40, unlocked: false },
+                { id: 'stor_t4', name: 'Grid Core', cost: 100, unlocked: false }
+            ],
+            buildings: [
+                { id: 'bld_family', name: 'Family Home', cost: 15, unlocked: false },
+                { id: 'bld_business', name: 'Small Business', cost: 40, unlocked: false },
+                { id: 'bld_corp', name: 'Corporate HQ', cost: 100, unlocked: false }
+            ]
+        };
     }
     
     initialize() {
@@ -189,6 +211,7 @@ class GameState {
         
         if (hoursPassed >= 1) {
             let totalIncome = 0;
+            let totalRP = 0;
             
             this.households.forEach(household => {
                 let baseIncomePerHour = 8;   // Default (cabin)
@@ -229,10 +252,24 @@ class GameState {
                 
                 const income = baseIncomePerHour + satisfactionBonus;
                 totalIncome += income;
+
+                // Research points from satisfaction: +2 at 85%+, +1 at 70%+
+                if (household.satisfaction >= 0.85) totalRP += 2;
+                else if (household.satisfaction >= 0.70) totalRP += 1;
             });
             
             if (totalIncome > 0) {
                 this.money += totalIncome;
+            }
+
+            if (totalRP > 0) {
+                this.researchPoints += totalRP;
+                if (window.Game && window.Game.worldRenderer) {
+                    window.Game.worldRenderer.spawnFloatText(
+                        this.households[0].x, this.households[0].y - 10,
+                        `+${totalRP} RP`, Theme.colors.cyan
+                    );
+                }
             }
             
             this.lastIncomeTime = this.time;
@@ -603,6 +640,10 @@ class GameState {
     
     getCurrentGoal() {
         return this.goals[this.currentGoalIndex];
+    }
+
+    getResearchNode(branch, id) {
+        return this.research[branch].find(n => n.id === id) || null;
     }
     
     getGoalProgress() {
