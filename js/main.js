@@ -845,11 +845,11 @@ const Game = {
         this.placementX = offsetX + Math.round(rawX / this.gridSize) * this.gridSize;
         this.placementY = offsetY + Math.round(rawY / this.gridSize) * this.gridSize;
         
-        // Check validity
+        // Check validity — allow the outermost gridlines inside the green boundary
         const minX = offsetX;
-        const maxX = offsetX + playWidth - this.gridSize;
+        const maxX = offsetX + Math.floor(playWidth / this.gridSize) * this.gridSize;
         const minY = offsetY;
-        const maxY = offsetY + playHeight - this.gridSize;
+        const maxY = offsetY + Math.floor(playHeight / this.gridSize) * this.gridSize;
         
         let inBounds = (this.placementX >= minX && this.placementX <= maxX && 
                        this.placementY >= minY && this.placementY <= maxY);

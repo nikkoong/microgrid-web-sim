@@ -608,14 +608,14 @@ class WorldRenderer {
         const width = this.playWidth;
         const height = this.playHeight;
 
-        for (let x = this.offsetX; x < this.offsetX + width; x += this.gridSize) {
+        for (let x = this.offsetX; x <= this.offsetX + width; x += this.gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(x, this.offsetY);
             this.ctx.lineTo(x, this.offsetY + height);
             this.ctx.stroke();
         }
 
-        for (let y = this.offsetY; y < this.offsetY + height; y += this.gridSize) {
+        for (let y = this.offsetY; y <= this.offsetY + height; y += this.gridSize) {
             this.ctx.beginPath();
             this.ctx.moveTo(this.offsetX, y);
             this.ctx.lineTo(this.offsetX + width, y);

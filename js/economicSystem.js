@@ -247,8 +247,8 @@ class PurchaseManager {
                 id,
                 capacity: equipment.capacity,
                 efficiency: equipment.efficiency,
-                x: x || Math.random() * 400,
-                y: y || Math.random() * 200,
+                x: (x !== undefined && x !== null) ? x : Math.random() * 400,
+                y: (y !== undefined && y !== null) ? y : Math.random() * 200,
                 degradation: 1.0,
                 tier: equipment.id.replace('solar_', ''),
                 cost: equipment.cost
@@ -260,8 +260,8 @@ class PurchaseManager {
                 capacity: equipment.capacity,
                 charge: equipment.capacity / 2,
                 efficiency: equipment.efficiency,
-                x: x || Math.random() * 400,
-                y: y || Math.random() * 200,
+                x: (x !== undefined && x !== null) ? x : Math.random() * 400,
+                y: (y !== undefined && y !== null) ? y : Math.random() * 200,
                 degradation: 1.0,
                 tier: equipment.id.replace('battery_', ''),
                 cost: equipment.cost
@@ -290,8 +290,8 @@ class PurchaseManager {
                 satisfaction: 1.0,
                 poweredTime: 0,
                 totalTime: 0,
-                x: x || Math.random() * 400,
-                y: y || Math.random() * 200,
+                x: (x !== undefined && x !== null) ? x : Math.random() * 400,
+                y: (y !== undefined && y !== null) ? y : Math.random() * 200,
                 personality: equipment.personality,
                 tier: equipment.id.replace('household_', ''),
                 cost: equipment.cost
