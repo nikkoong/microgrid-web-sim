@@ -272,9 +272,9 @@ const Game = {
         // Adjust positions based on device type
         const isMobileLayout = this.isMobile || this.isTouch;
         
-        // Energy bars - mobile: bottom-left; desktop: left pane, outside the play area
+        // Energy bars - mobile: bottom-left; desktop: left pane, top-aligned with shop panel
         const barX = 8;
-        const barY = isMobileLayout ? 640 : 450;  // Mobile: near bottom, Desktop: middle-left pane
+        const barY = isMobileLayout ? 640 : 210;  // Mobile: near bottom, Desktop: top-aligned with shop
         const barWidth = isMobileLayout ? 180 : 210;
         const barHeight = isMobileLayout ? 22 : 30;
         const barSpacing = isMobileLayout ? 28 : 40;
@@ -286,7 +286,7 @@ const Game = {
         this.uiElements.push(generationBar, storageBar, consumptionBar);
         
         // Time display button
-        const timeButton = new Button(20, 10, 200, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright });
+        const timeButton = new Button(20, 10, 220, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright, textAlign: 'left' });
         this.uiElements.push(timeButton);
         
         // Pause/Play button
@@ -305,14 +305,14 @@ const Game = {
         this.uiElements.push(pauseButton);
         
         // Weather info
-        const weatherButton = new Button(20, 50, 200, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright });
+        const weatherButton = new Button(20, 50, 220, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright, textAlign: 'left' });
         this.uiElements.push(weatherButton);
         
-        // Stats panel - left pane, outside the play area
+        // Stats panel - left pane, below energy bars, same bottom as shop panel
         const statsPanelX = isMobileLayout ? 210 : 8;
-        const statsPanelY = isMobileLayout ? 580 : 580;
+        const statsPanelY = isMobileLayout ? 580 : 340;
         const statsPanelWidth = isMobileLayout ? 280 : 212;
-        const statsPanelHeight = isMobileLayout ? 210 : 230;
+        const statsPanelHeight = isMobileLayout ? 210 : 270;
         const statsPanel = new Panel(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight, 'Grid Statistics');
         statsPanel.visible = true;
         this.uiElements.push(statsPanel);
@@ -373,8 +373,8 @@ const Game = {
         // Help panel (hidden by default)
         this.helpPanelVisible = false;
         
-        // NotificationSystem width — right pane, fits under max right-pane width
-        this.notificationSystem.notifWidth = 212;
+        // NotificationSystem width — right pane on desktop, wider on mobile
+        this.notificationSystem.notifWidth = (this.isMobile || this.isTouch) ? 380 : 212;
         
         // Mobile-specific: Cancel button for placement mode
         if (this.isMobile || this.isTouch) {
@@ -737,14 +737,14 @@ const Game = {
     
     showTutorial() {
         // Don't show blocking dialog - just add a subtle notification
-        this.notificationSystem.addNotification('Welcome! Click green button (top-right) to buy equipment. Complete goals to win!', 'info');
+        this.notificationSystem.addNotification('Welcome! Buy equipment from the shop to power your first buildings.', 'info');
     },
     
     // Placement System Methods
     startPlacement(equipment) {
         // Check if player can afford it before entering placement mode
         if (!this.purchaseManager.canAfford(equipment.cost)) {
-            this.notificationSystem.addNotification(`Not enough money! Need $${equipment.cost}`, 'error');
+            this.notificationSystem.addNotification(`Not enough money! Need $${equipment.cost}!`, 'error');
             return;
         }
         
@@ -771,7 +771,7 @@ const Game = {
         
         // Show instruction notification on mobile
         if (this.isMobile || this.isTouch) {
-            this.notificationSystem.addNotification('Drag to position, lift to place. Tap CANCEL to abort.', 'info');
+            this.notificationSystem.addNotification('Drag to position, lift to place. Tap CANCEL to abort!', 'info');
         }
     },
     
@@ -781,7 +781,7 @@ const Game = {
         // Refund the money if item wasn't placed yet
         if (this.placementItem) {
             this.gameState.money += this.placementItem.cost;
-            this.notificationSystem.addNotification(`Placement cancelled. Refunded $${this.placementItem.cost}`, 'info');
+            this.notificationSystem.addNotification(`Placement cancelled. Refunded $${this.placementItem.cost}!`, 'info');
         }
         
         this.placementMode = false;
@@ -1217,7 +1217,7 @@ const Game = {
         }
 
         // Render notifications - top-right corner, in the right pane (outside play area)
-        const notifX = 968;
+        const notifX = (this.isMobile || this.isTouch) ? 12 : 968;
         const notifY = 10;
         this.notificationSystem.render(this.ctx, notifX, notifY);
         

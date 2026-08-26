@@ -104,7 +104,7 @@ class Button extends UIElement {
 
         ctx.fillStyle = textColor;
         ctx.font = Theme.font(parseInt(this.style.fontSize, 10));
-        ctx.textAlign = 'center';
+        ctx.textAlign = this.style.textAlign || 'center';
         ctx.textBaseline = 'middle';
         
         // Handle multi-line text
@@ -114,7 +114,7 @@ class Button extends UIElement {
         const startY = (this.y + pressOffset) + (this.height - totalHeight) / 2 + lineHeight / 2;
         
         lines.forEach((line, index) => {
-            ctx.fillText(line, (this.x + pressOffset) + this.width / 2, startY + index * lineHeight);
+            ctx.fillText(line, (this.x + pressOffset) + (this.style.textAlign === 'left' ? 8 : this.width / 2), startY + index * lineHeight);
         });
 
         super.render(ctx);
