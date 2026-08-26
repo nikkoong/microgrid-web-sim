@@ -71,6 +71,12 @@ const Game = {
     selectedEntity: null,
     selectedEntityType: null, // 'solar', 'battery', 'household'
     
+    // Research panel state
+    researchPanelVisible: false,
+    researchNodeButtons: [],
+    researchButton: null,
+    researchBranchHeaderYs: null,
+    
     init() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
@@ -370,6 +376,33 @@ const Game = {
         });
         this.uiElements.push(helpButton);
         
+        // Research toggle button - right of the restart button
+        const researchButton = new Button(440, 10, 100, 30, 'RESEARCH', () => {
+            this.toggleResearchPanel();
+        }, { 
+            bgColor: Theme.colors.green,
+            hoverBgColor: Theme.colors.greenDark,
+            activeBgColor: Theme.colors.greenDark,
+            borderColor: Theme.colors.greenDim,
+            textColor: Theme.colors.textBright,
+            fontSize: '10px'
+        });
+        researchButton.visible = !isMobileLayout;
+        this.uiElements.push(researchButton);
+        this.researchButton = researchButton;
+        
+        // Build research node buttons
+        this.buildResearchButtons();
+        
+        // Store references to frequently-updated HUD elements (avoid index drift)
+        this.timeButtonRef = timeButton;
+        this.weatherButtonRef = weatherButton;
+        this.generationBarRef = generationBar;
+        this.storageBarRef = storageBar;
+        this.consumptionBarRef = consumptionBar;
+        this.statsPanelRef = statsPanel;
+        this.goalPanelRef = goalPanel;
+        
         // Help panel (hidden by default)
         this.helpPanelVisible = false;
         
@@ -393,6 +426,121 @@ const Game = {
             );
             this.cancelPlacementButton.visible = false;
         }
+    },
+    
+    buildResearchButtons() {
+        if (!this.gameState || !this.gameState.research) return;
+        
+        this.researchNodeButtons = [];
+        this.researchBranchHeaderYs = {};
+        
+        const bp = this.researchPanelBounds();
+        let y = bp.y + 48;
+        
+        const branches = ['solar', 'storage', 'buildings'];
+        
+        for (const branch of branches) {
+            this.researchBranchHeaderYs[branch] = y;
+            y += 16;
+            
+            const branchNodes = this.gameState.research[branch];
+            branchNodes.forEach((node, nodeIndex) => {
+                const tierKey = 'tier' + (nodeIndex + 2);
+                const iconColor = (Theme.colors.tierColors && Theme.colors.tierColors[tierKey]) || Theme.colors.green;
+                
+                const btn = new Button(bp.x + 10, y, bp.width - 20, 26, `${node.name}  ${node.cost} RP`, () => {
+                    this.handleResearchClick(branch, node.id, node.cost);
+                }, {
+                    bgColor: Theme.rgba(iconColor, 0.25),
+                    hoverBgColor: Theme.rgba(iconColor, 0.4),
+                    activeBgColor: Theme.rgba(iconColor, 0.5),
+                    borderColor: iconColor,
+                    textColor: Theme.colors.textBright,
+                    fontSize: '9px'
+                });
+                
+                this.researchNodeButtons.push({ button: btn, branch, id: node.id, cost: node.cost });
+                y += 28;
+            });
+            
+            y += 8;
+        }
+    },
+    
+    researchPanelBounds() {
+        return { x: 962, y: 210, width: 215, height: 396 };
+    },
+    
+    handleResearchClick(branch, id, cost) {
+        if (!this.gameState) return;
+        
+        const node = this.gameState.getResearchNode(branch, id);
+        if (!node || node.unlocked) return;
+        
+        // Sequential gate: previous node must be unlocked
+        const branchNodes = this.gameState.research[branch];
+        const idx = branchNodes.indexOf(node);
+        if (idx > 0 && !branchNodes[idx - 1].unlocked) {
+            this.notificationSystem.addNotification('Research the previous tech first!', 'warning');
+            return;
+        }
+        
+        if (this.gameState.researchPoints < cost) {
+            this.notificationSystem.addNotification(`Need ${cost} RP to research!`, 'error');
+            return;
+        }
+        
+        this.gameState.researchPoints -= cost;
+        node.unlocked = true;
+        this.notificationSystem.addNotification(`${node.name} researched!`, 'success');
+    },
+    
+    toggleResearchPanel() {
+        this.researchPanelVisible = !this.researchPanelVisible;
+        // Hide the shop menu while researching so the panel isn't cluttered
+        if (!(this.isMobile || this.isTouch) && this.shopMenu) {
+            this.shopMenu.visible = !this.researchPanelVisible;
+        }
+    },
+    
+    renderResearchPanel() {
+        if (!this.gameState || !this.gameState.research) return;
+        
+        const bp = this.researchPanelBounds();
+        
+        // Panel background
+        const panel = new Panel(bp.x, bp.y, bp.width, bp.height, 'RESEARCH');
+        panel.render(this.ctx);
+        
+        // RP counter in header
+        this.ctx.fillStyle = Theme.colors.gold;
+        this.ctx.font = Theme.font(12);
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+        this.ctx.fillText(`RP: ${this.gameState.researchPoints}`, bp.x + 10, bp.y + 30);
+        
+        // Branch labels + node state
+        const branches = ['solar', 'storage', 'buildings'];
+        const branchLabels = { solar: 'SOLAR', storage: 'STORAGE', buildings: 'BUILDINGS' };
+        
+        this.ctx.font = Theme.font(10);
+        this.ctx.textBaseline = 'top';
+        for (const branch of branches) {
+            const headerY = this.researchBranchHeaderYs[branch];
+            this.ctx.fillStyle = Theme.colors.textBright;
+            this.ctx.fillText(branchLabels[branch], bp.x + 10, headerY);
+        }
+        
+        // Render each node button, updating locked/unlocked state
+        this.researchNodeButtons.forEach(rbtn => {
+            const node = this.gameState.getResearchNode(rbtn.branch, rbtn.id);
+            if (node && node.unlocked) {
+                rbtn.button.setDisabled(true);
+            } else {
+                rbtn.button.setDisabled(false);
+            }
+            rbtn.button.render(this.ctx);
+        });
     },
     
     // Device detection
@@ -582,6 +730,20 @@ const Game = {
             }
             if (this.deleteButton && this.isPointInRect(screenX, screenY, this.deleteButton)) {
                 this.deleteSelectedEntity();
+                return true;
+            }
+        }
+        
+        // Handle research node buttons (research panel)
+        if (this.researchPanelVisible && this.researchNodeButtons) {
+            for (const rbtn of this.researchNodeButtons) {
+                if (!rbtn.button.disabled && rbtn.button.handleClick(screenX, screenY)) {
+                    return true;
+                }
+            }
+            // Block clicks over the panel body (but not the toggle button outside it)
+            const bp = this.researchPanelBounds();
+            if (this.isPointInRect(screenX, screenY, { x: bp.x, y: bp.y, width: bp.width, height: bp.height })) {
                 return true;
             }
         }
@@ -1267,6 +1429,11 @@ const Game = {
             this.renderHelpPanel();
         }
         
+        // Render research panel (right pane, below/over shop)
+        if (this.researchPanelVisible) {
+            this.renderResearchPanel();
+        }
+        
         // Debug: Show zoom level on mobile
         if (this.isMobile && this.camera) {
             this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -1296,7 +1463,7 @@ const Game = {
         const gs = this.gameState;
         
         // Update time button with day/night indicator
-        const timeButton = this.uiElements[3];
+        const timeButton = this.timeButtonRef || this.uiElements[3];
         if (timeButton) {
             const hour = Math.floor(gs.time % 24);
             const day = Math.floor(gs.time / 24);
@@ -1306,7 +1473,7 @@ const Game = {
         }
         
         // Update weather button
-        const weatherButton = this.uiElements[5];
+        const weatherButton = this.weatherButtonRef || this.uiElements[5];
         if (weatherButton) {
             const cloudPercent = (gs.weather.cloudCover * 100).toFixed(0);
             const intensityPercent = (gs.getSolarIntensity() * 100).toFixed(0);
@@ -1315,9 +1482,9 @@ const Game = {
         
         // Update energy bars with dynamic max values
         if (gs.energy) {
-            const generationBar = this.uiElements[0];
-            const storageBar = this.uiElements[1];
-            const consumptionBar = this.uiElements[2];
+            const generationBar = this.generationBarRef || this.uiElements[0];
+            const storageBar = this.storageBarRef || this.uiElements[1];
+            const consumptionBar = this.consumptionBarRef || this.uiElements[2];
             
             if (generationBar) {
                 // Update max based on total solar capacity
@@ -1344,7 +1511,7 @@ const Game = {
         }
         
         // Update stats panel
-        const statsPanel = this.uiElements[6];
+        const statsPanel = this.statsPanelRef || this.uiElements[6];
         if (statsPanel && statsPanel.visible) {
             // Calculate average satisfaction
             const avgSatisfaction = gs.households.length > 0 
@@ -1370,7 +1537,7 @@ const Game = {
         }
         
         // Update goal panel
-        const goalPanel = this.uiElements[7];
+        const goalPanel = this.goalPanelRef || this.uiElements[7];
         if (goalPanel && gs.getCurrentGoal) {
             const currentGoal = gs.getCurrentGoal();
             const progress = gs.getGoalProgress();
