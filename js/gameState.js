@@ -794,7 +794,9 @@ class StorageManager {
                     weather: { ...gameState.weather },
                     goals: [...gameState.goals],
                     currentGoalIndex: gameState.currentGoalIndex,
-                    gameWon: gameState.gameWon
+                    gameWon: gameState.gameWon,
+                    researchPoints: gameState.researchPoints,
+                    research: gameState.research
                 }
             };
             
@@ -833,6 +835,12 @@ class StorageManager {
                 gameState.goals = saveData.state.goals;
                 gameState.currentGoalIndex = saveData.state.currentGoalIndex || 0;
                 gameState.gameWon = saveData.state.gameWon || false;
+            }
+
+            // Load research data (with fallback for older saves)
+            gameState.researchPoints = saveData.state.researchPoints || 0;
+            if (saveData.state.research) {
+                gameState.research = saveData.state.research;
             }
             
             return true;
