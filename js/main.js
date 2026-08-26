@@ -284,11 +284,11 @@ const Game = {
                 }
             },
             { 
-                bgColor: '#00b894', 
-                hoverBgColor: '#00cec9',
-                activeBgColor: '#00a884',
-                borderColor: '#00cec9',
-                textColor: '#ffffff' 
+                bgColor: Theme.colors.green, 
+                hoverBgColor: Theme.colors.greenDark,
+                activeBgColor: Theme.colors.greenDark,
+                borderColor: Theme.colors.greenDim,
+                textColor: Theme.colors.textBright 
             }
         );
         this.uiElements.push(moneyButton);
@@ -308,7 +308,7 @@ const Game = {
         this.uiElements.push(generationBar, storageBar, consumptionBar);
         
         // Time display button
-        const timeButton = new Button(20, 10, 200, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: '#000000' });
+        const timeButton = new Button(20, 10, 200, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright });
         this.uiElements.push(timeButton);
         
         // Pause/Play button
@@ -317,15 +317,15 @@ const Game = {
             pauseButton.text = this.isPaused ? 'Play' : 'Pause';
             this.notificationSystem.addNotification(this.isPaused ? 'Game paused' : 'Game resumed', 'info');
         }, { 
-            bgColor: '#74b9ff',
-            hoverBgColor: '#0984e3',
-            activeBgColor: '#0652dd',
+            bgColor: Theme.colors.cyan,
+            hoverBgColor: Theme.colors.cyan,
+            activeBgColor: Theme.colors.cyan,
             fontSize: '14px'
         });
         this.uiElements.push(pauseButton);
         
         // Weather info
-        const weatherButton = new Button(20, 50, 300, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: '#000000' });
+        const weatherButton = new Button(20, 50, 300, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright });
         this.uiElements.push(weatherButton);
         
         // Stats panel - visible on both mobile and desktop, repositioned for mobile
@@ -355,9 +355,9 @@ const Game = {
             }
         }, { 
             fontSize: '12px',
-            bgColor: '#e17055',
-            hoverBgColor: '#d63031',
-            activeBgColor: '#c0392b'
+            bgColor: Theme.colors.amber,
+            hoverBgColor: Theme.colors.red,
+            activeBgColor: Theme.colors.red
         });
         newGameButton.visible = !isMobileLayout;
         this.uiElements.push(newGameButton);
@@ -366,9 +366,9 @@ const Game = {
         const helpButton = new Button(340, 10, 40, 30, '?', () => {
             this.helpPanelVisible = !this.helpPanelVisible;
         }, { 
-            bgColor: '#6c5ce7',
-            hoverBgColor: '#5f27cd',
-            activeBgColor: '#341f97',
+            bgColor: Theme.colors.purple,
+            hoverBgColor: Theme.colors.purple,
+            activeBgColor: Theme.colors.purple,
             fontSize: '18px',
             fontWeight: 'bold'
         });
@@ -384,11 +384,11 @@ const Game = {
                 'CANCEL',
                 () => this.cancelPlacement(),
                 {
-                    bgColor: '#d63031',
-                    hoverBgColor: '#e74c3c',
-                    activeBgColor: '#c0392b',
-                    borderColor: '#c0392b',
-                    textColor: '#ffffff',
+                    bgColor: Theme.colors.red,
+                    hoverBgColor: Theme.colors.red,
+                    activeBgColor: Theme.colors.red,
+                    borderColor: Theme.colors.red,
+                    textColor: Theme.colors.textBright,
                     fontSize: '16px'
                 }
             );
@@ -1355,8 +1355,8 @@ const Game = {
                 `Surplus: ${gs.energy.surplus > 0 ? '+' : ''}${gs.energy.surplus.toFixed(1)} kW`
             ];
             
-            this.ctx.fillStyle = '#2b2b2b';
-            this.ctx.font = '12px monospace'; // Smaller font to fit
+            this.ctx.fillStyle = Theme.colors.text;
+            this.ctx.font = Theme.font(12); // Smaller font to fit
             this.ctx.textAlign = 'left';
             statsText.forEach((text, index) => {
                 this.ctx.fillText(text, statsPanel.x + 10, statsPanel.y + 40 + index * 20);
@@ -1370,12 +1370,12 @@ const Game = {
             const progress = gs.getGoalProgress();
             
             if (currentGoal) {
-                this.ctx.fillStyle = '#2b2b2b';
-                this.ctx.font = 'bold 14px monospace';
+                this.ctx.fillStyle = Theme.colors.textBright;
+                this.ctx.font = Theme.font(14);
                 this.ctx.textAlign = 'left';
                 this.ctx.fillText(currentGoal.description, goalPanel.x + 10, goalPanel.y + 35);
                 
-                this.ctx.font = '12px monospace';
+                this.ctx.font = Theme.font(12);
                 
                 // Show detailed breakdown for multi-type goals (Goal 3)
                 if (progress.detailed) {
@@ -1400,14 +1400,14 @@ const Game = {
                 const barWidth = goalPanel.width - 20;
                 const barHeight = 6;
                 
-                this.ctx.fillStyle = '#cccccc';
+                this.ctx.fillStyle = Theme.colors.panelBgAlt;
                 this.ctx.fillRect(barX, barY, barWidth, barHeight);
                 
-                this.ctx.fillStyle = '#00b894';
+                this.ctx.fillStyle = Theme.colors.green;
                 this.ctx.fillRect(barX, barY, (barWidth * Math.min(progress.percentage, 100) / 100), barHeight);
             } else if (gs.gameWon) {
-                this.ctx.fillStyle = '#00b894';
-                this.ctx.font = 'bold 18px monospace';
+                this.ctx.fillStyle = Theme.colors.green;
+                this.ctx.font = Theme.font(18);
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText('ALL GOALS COMPLETED!', goalPanel.x + goalPanel.width / 2, goalPanel.y + 45);
             }
@@ -1465,16 +1465,16 @@ const Game = {
         const panelWidth = 280;
         const panelHeight = 200;
         
-        // Panel background (tan like stats panel)
-        this.ctx.fillStyle = '#f5f5dc';
-        this.ctx.strokeStyle = '#4a4a4a';
+        // Panel background (dark like stats panel)
+        this.ctx.fillStyle = Theme.colors.panelBg;
+        this.ctx.strokeStyle = Theme.colors.greenFaint;
         this.ctx.lineWidth = 3;
         this.ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
         this.ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
         
         // Title with instance ID
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = 'bold 14px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(14);
         this.ctx.textAlign = 'left';
         const instanceId = this.selectedEntity.id || 'unknown';
         this.ctx.fillText(`Selected: ${instanceId}`, panelX + 10, panelY + 20);
@@ -1494,24 +1494,24 @@ const Game = {
         if (entityEvents.length > 0) {
             entityEvents.forEach(event => {
                 // Draw tag background
-                const tagColor = event.severity === 'high' ? '#d63031' : event.severity === 'medium' ? '#fdcb6e' : '#74b9ff';
+                const tagColor = event.severity === 'high' ? Theme.colors.red : event.severity === 'medium' ? Theme.colors.amber : Theme.colors.cyan;
                 this.ctx.fillStyle = tagColor;
-                this.ctx.font = '10px monospace';
+                this.ctx.font = Theme.font(10);
                 const tagText = event.name || 'Event Active';
                 const tagWidth = this.ctx.measureText(tagText).width + 10;
                 this.ctx.fillRect(panelX + 10, panelY + yOffset - 10, tagWidth, 16);
                 
                 // Draw tag text
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.font = '10px monospace';
+                this.ctx.fillStyle = Theme.colors.textBright;
+                this.ctx.font = Theme.font(10);
                 this.ctx.fillText(tagText, panelX + 15, panelY + yOffset);
                 yOffset += 20;
             });
         }
         
         // Entity info
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '12px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(12);
         
         // Tier info
         const currentTier = this.selectedEntity.tier || 'tier1';
@@ -1544,8 +1544,8 @@ const Game = {
             }
         });
         
-        const normalColor = '#2b2b2b';
-        const affectedColor = '#d63031';  // Red for affected stats
+        const normalColor = Theme.colors.text;
+        const affectedColor = Theme.colors.red;  // Red for affected stats
         
         switch (this.selectedEntityType) {
             case 'solar':
@@ -1617,20 +1617,20 @@ const Game = {
             
             // Gray out if can't afford or max tier
             if (isMaxTier) {
-                this.ctx.fillStyle = '#888888';
+                this.ctx.fillStyle = Theme.colors.textDim;
             } else if (!canAfford) {
-                this.ctx.fillStyle = '#a0a0a0';
+                this.ctx.fillStyle = Theme.colors.panelBgAlt;
             } else {
-                this.ctx.fillStyle = mouseOver ? '#00cec9' : '#00b894';
+                this.ctx.fillStyle = mouseOver ? Theme.colors.greenDark : Theme.colors.green;
             }
             
             this.ctx.fillRect(upgradeBtn.x, upgradeBtn.y, upgradeBtn.width, upgradeBtn.height);
-            this.ctx.strokeStyle = isMaxTier || !canAfford ? '#666666' : '#00a884';
+            this.ctx.strokeStyle = isMaxTier || !canAfford ? Theme.colors.textDim : Theme.colors.greenDim;
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(upgradeBtn.x, upgradeBtn.y, upgradeBtn.width, upgradeBtn.height);
             
-            this.ctx.fillStyle = isMaxTier || !canAfford ? '#cccccc' : '#ffffff';
-            this.ctx.font = 'bold 11px monospace';
+            this.ctx.fillStyle = isMaxTier || !canAfford ? Theme.colors.textDim : Theme.colors.textBright;
+            this.ctx.font = Theme.font(11);
             this.ctx.textAlign = 'center';
             this.ctx.fillText(buttonText, upgradeBtn.x + upgradeBtn.width / 2, upgradeBtn.y + 22);
             
@@ -1651,14 +1651,14 @@ const Game = {
         const mouseOverDelete = this.mouseX >= deleteBtn.x && this.mouseX <= deleteBtn.x + deleteBtn.width &&
                                this.mouseY >= deleteBtn.y && this.mouseY <= deleteBtn.y + deleteBtn.height;
         
-        this.ctx.fillStyle = mouseOverDelete ? '#d63031' : '#ff6b6b';
+        this.ctx.fillStyle = mouseOverDelete ? Theme.rgba(Theme.colors.red, 0.8) : Theme.colors.red;
         this.ctx.fillRect(deleteBtn.x, deleteBtn.y, deleteBtn.width, deleteBtn.height);
-        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.strokeStyle = Theme.colors.red;
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(deleteBtn.x, deleteBtn.y, deleteBtn.width, deleteBtn.height);
         
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 12px monospace';
+        this.ctx.fillStyle = Theme.colors.textBright;
+        this.ctx.font = Theme.font(12);
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Refund 50%', deleteBtn.x + deleteBtn.width / 2, deleteBtn.y + 22);
         
@@ -1673,7 +1673,7 @@ const Game = {
         if (!this.victoryOverlay) return;
         
         // Semi-transparent dark overlay
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        this.ctx.fillStyle = Theme.colors.backdrops;
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         // Victory banner (centered, gold border)
@@ -1683,33 +1683,33 @@ const Game = {
         const bannerH = 500;
         
         // Banner background
-        this.ctx.fillStyle = '#2d3436';
+        this.ctx.fillStyle = Theme.colors.panelBg;
         this.ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
         
         // Gold border
-        this.ctx.strokeStyle = '#ffd700';
+        this.ctx.strokeStyle = Theme.colors.gold;
         this.ctx.lineWidth = 6;
         this.ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
         
         // "CONGRATULATIONS!" header
-        this.ctx.fillStyle = '#ffd700';
-        this.ctx.font = 'bold 48px monospace';
+        this.ctx.fillStyle = Theme.colors.gold;
+        this.ctx.font = Theme.font(48);
         this.ctx.textAlign = 'center';
         this.ctx.fillText('CONGRATULATIONS!', this.width / 2, bannerY + 80);
         
         // Subtitle
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '24px monospace';
+        this.ctx.fillStyle = Theme.colors.textBright;
+        this.ctx.font = Theme.font(24);
         this.ctx.fillText("You've completed all goals and mastered the microgrid!", this.width / 2, bannerY + 130);
         
         // Fun fact header
-        this.ctx.fillStyle = '#00b894';
-        this.ctx.font = 'bold 20px monospace';
+        this.ctx.fillStyle = Theme.colors.green;
+        this.ctx.font = Theme.font(20);
         this.ctx.fillText('Did You Know?', this.width / 2, bannerY + 200);
         
         // Fun fact text (word-wrapped)
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '16px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(16);
         this.wrapText(this.selectedFunFact, this.width / 2, bannerY + 240, bannerW - 80, 24);
         
         // "Start New Game?" button
@@ -1725,21 +1725,21 @@ const Game = {
         const isHovered = this.mouseX >= btnX && this.mouseX <= btnX + btnW &&
                           this.mouseY >= btnY && this.mouseY <= btnY + btnH;
         
-        this.ctx.fillStyle = isHovered ? '#00cec9' : '#00b894';
+        this.ctx.fillStyle = isHovered ? Theme.colors.greenDark : Theme.colors.green;
         this.ctx.fillRect(btnX, btnY, btnW, btnH);
-        this.ctx.strokeStyle = '#00a884';
+        this.ctx.strokeStyle = Theme.colors.greenDim;
         this.ctx.lineWidth = 3;
         this.ctx.strokeRect(btnX, btnY, btnW, btnH);
         
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 20px monospace';
+        this.ctx.fillStyle = Theme.colors.textBright;
+        this.ctx.font = Theme.font(20);
         this.ctx.textAlign = 'center';
         this.ctx.fillText('Start New Game?', this.width / 2, btnY + 16);
     },
     
     renderHelpPanel() {
         // Semi-transparent dark overlay
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        this.ctx.fillStyle = Theme.colors.backdrops;
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         // Help panel (centered, larger to fit new content)
@@ -1749,17 +1749,17 @@ const Game = {
         const panelH = 740;
         
         // Panel background
-        this.ctx.fillStyle = '#f5f5dc';
+        this.ctx.fillStyle = Theme.colors.panelBg;
         this.ctx.fillRect(panelX, panelY, panelW, panelH);
         
         // Purple border
-        this.ctx.strokeStyle = '#6c5ce7';
+        this.ctx.strokeStyle = Theme.colors.purple;
         this.ctx.lineWidth = 4;
         this.ctx.strokeRect(panelX, panelY, panelW, panelH);
         
         // Title
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = 'bold 24px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(24);
         this.ctx.textAlign = 'center';
         this.ctx.fillText('GAME HELP', panelX + panelW / 2, panelY + 40);
         
@@ -1770,18 +1770,18 @@ const Game = {
         const lineHeight = 20;
         
         this.ctx.textAlign = 'left';
-        this.ctx.font = '11px monospace';
+        this.ctx.font = Theme.font(11);
         
         // LEFT COLUMN
         
         // Section 1: Game Objective
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 13px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(13);
         this.ctx.fillText('GAME OBJECTIVE', leftMargin, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('Balance and upgrade your microgrid to build', leftMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('more houses and keep them satisfied. Complete', leftMargin, yPos);
@@ -1790,13 +1790,13 @@ const Game = {
         yPos += lineHeight + 8;
         
         // Section 2: Controls
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 13px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(13);
         this.ctx.fillText('CONTROLS', leftMargin, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Click SHOP to buy equipment', leftMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('• Click grid to place equipment', leftMargin, yPos);
@@ -1807,13 +1807,13 @@ const Game = {
         yPos += lineHeight + 8;
         
         // Section 3: Energy System
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 13px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(13);
         this.ctx.fillText('ENERGY SYSTEM', leftMargin, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('Solar panels generate power during the day.', leftMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('Batteries store excess energy for nighttime.', leftMargin, yPos);
@@ -1823,36 +1823,36 @@ const Game = {
         this.ctx.fillText('Weather and time affect solar generation.', leftMargin, yPos);
         yPos += lineHeight + 4;
         
-        this.ctx.fillStyle = '#00b894';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.colors.green;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('Solar Panel Tiers:', leftMargin, yPos);
         yPos += lineHeight;
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('T1: 5kW, 85% eff | T2: 10kW, 90% eff', leftMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('T3: 15kW, 95% eff | T4: 25kW, 98% (WEATHERPROOF)', leftMargin, yPos);
         yPos += lineHeight + 4;
         
-        this.ctx.fillStyle = '#00b894';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.colors.green;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('Battery Tiers:', leftMargin, yPos);
         yPos += lineHeight;
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('T1: 10kWh, 90% eff | T2: 20kWh, 92% eff', leftMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('T3: 40kWh, 95% eff | T4: 80kWh, 98% (SELF-HEALING)', leftMargin, yPos);
         yPos += lineHeight + 8;
         
         // Section 4: Buildings
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 13px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(13);
         this.ctx.fillText('BUILDINGS AND INCOME', leftMargin, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('Cabin: 1.0-1.5kW | Hourly: $8 + $5 satisfaction bonus', leftMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('Family Home: 3.0-4.5kW | Hourly: $16 + $10 satisfaction bonus', leftMargin, yPos);
@@ -1868,89 +1868,89 @@ const Game = {
         yPos = panelY + 70;
         
         // Section 5: Events
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 13px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(13);
         this.ctx.fillText('CRISIS EVENTS', rightMargin, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('Random events challenge your grid management:', rightMargin, yPos);
         yPos += lineHeight + 4;
         
-        this.ctx.fillStyle = '#d63031';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('error');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Equipment Failure', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Solar/battery malfunction', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#d63031';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('error');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Weather Storms', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Reduces solar generation', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#fdcb6e';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('warning');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Demand Spike', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Households use more power', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#fdcb6e';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('warning');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Battery Issue', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Discharge or efficiency drop', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#fdcb6e';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('warning');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Household Event', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Varies by household type', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#74b9ff';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('info');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Maintenance', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Temporary efficiency boost', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#00b894';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.severityColor('success');
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Grid Bonus', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Money or energy boost', rightMargin + 150, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 11px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Special Event', rightMargin, yPos);
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText(' - Rare, high-impact events', rightMargin + 150, yPos);
         yPos += lineHeight + 8;
         
         
         // Strategy Tips Section
-        this.ctx.fillStyle = '#6c5ce7';
-        this.ctx.font = 'bold 13px monospace';
+        this.ctx.fillStyle = Theme.colors.purple;
+        this.ctx.font = Theme.font(13);
         this.ctx.fillText('STRATEGY TIPS', rightMargin, yPos);
         yPos += lineHeight;
         
-        this.ctx.fillStyle = '#2b2b2b';
-        this.ctx.font = '11px monospace';
+        this.ctx.fillStyle = Theme.colors.text;
+        this.ctx.font = Theme.font(11);
         this.ctx.fillText('• Build enough batteries for nighttime demand', rightMargin, yPos);
         yPos += lineHeight;
         this.ctx.fillText('• Upgrade to Tier 4 for elite abilities', rightMargin, yPos);
@@ -1976,14 +1976,14 @@ const Game = {
         const isHovered = this.mouseX >= closeBtnX && this.mouseX <= closeBtnX + closeBtnSize &&
                           this.mouseY >= closeBtnY && this.mouseY <= closeBtnY + closeBtnSize;
         
-        this.ctx.fillStyle = isHovered ? '#d63031' : '#ff6b6b';
+        this.ctx.fillStyle = isHovered ? Theme.rgba(Theme.colors.red, 0.8) : Theme.colors.red;
         this.ctx.fillRect(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize);
-        this.ctx.strokeStyle = '#c0392b';
+        this.ctx.strokeStyle = Theme.colors.red;
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize);
         
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 20px monospace';
+        this.ctx.fillStyle = Theme.colors.textBright;
+        this.ctx.font = Theme.font(20);
         this.ctx.textAlign = 'center';
         this.ctx.fillText('X', closeBtnX + closeBtnSize / 2, closeBtnY + 10);
     },
