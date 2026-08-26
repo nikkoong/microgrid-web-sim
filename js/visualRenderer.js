@@ -362,6 +362,59 @@ class WorldRenderer {
         this.playHeight = 560;
         this.playRight = this.offsetX + this.playWidth;   // 950
         this.playBottom = this.offsetY + this.playHeight; // 660
+        // Floating text effects (coin popups, satisfaction updates, etc.)
+        this.floatTexts = [];
+        this.coinAccumulator = 0; // accumulates income to trigger coin popups
+    }
+
+    // Spawn a floating text effect that rises and fades
+    spawnFloatText(wx, wy, text, color, life = 1.5) {
+        this.floatTexts.push({
+            x: this.offsetX + wx,
+            y: this.offsetY + wy,
+            text,
+            color,
+            life,
+            maxLife: life
+        });
+    }
+
+    // Called each frame by main when income is earned — floats coin popups over households
+    addIncomeEffects(totalIncome) {
+        if (totalIncome <= 0 || this.gameState.households.length === 0) return;
+        // Distribute a few coin popups across random households
+        const popCount = Math.min(3, this.gameState.households.length);
+        for (let i = 0; i < popCount; i++) {
+            const h = this.gameState.households[i % this.gameState.households.length];
+            this.spawnFloatText(h.x, h.y - 20, `+$${Math.round(totalIncome / popCount)}`, Theme.colors.green);
+        }
+    }
+
+    updateFloatTexts(deltaTime) {
+        this.floatTexts.forEach(ft => {
+            ft.y -= 20 * deltaTime;      // rise upward
+            ft.life -= deltaTime;
+        });
+        this.floatTexts = this.floatTexts.filter(ft => ft.life > 0);
+    }
+
+    renderFloatTexts() {
+        const ctx = this.ctx;
+        this.floatTexts.forEach(ft => {
+            const alpha = Math.min(1, ft.life / (ft.maxLife * 0.4));
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = ft.color;
+            ctx.font = Theme.font(12);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.globalAlpha = 1;
+        });
+    }
+
+    isNight() {
+        const time = this.gameState.time % 24;
+        return time < 6 || time > 18;
     }
 
     render(isPaused = false) {
@@ -373,9 +426,11 @@ class WorldRenderer {
         this.drawConnections(isPaused);
         this.particleSystem.render(this.ctx);
         // Draw entities on top of particles
-        this.drawEquipment();
+        this.drawEquipment(isPaused);
         // Draw labels with backgrounds on top of everything
         this.drawEntityLabels();
+        // Draw floating text effects (coin popups) last so they're on top
+        this.renderFloatTexts();
     }
 
     // Green CRT border around the playable canvas area
@@ -589,11 +644,13 @@ class WorldRenderer {
         this.ctx.fill();
     }
 
-    drawEquipment() {
+    drawEquipment(isPaused = false) {
         if (!this.gameState) return;
 
         // Get active events to check for status indicators
         const activeEvents = this.gameState.eventSystem ? this.gameState.eventSystem.activeEvents : [];
+        const atNight = this.isNight();
+        // Pass atNight / isPaused into household loop for window lights + satisfaction bubbles
 
         // Draw solar panels (no labels - handled by drawEntityLabels)
         this.gameState.solarPanels.forEach(panel => {
@@ -648,6 +705,16 @@ class WorldRenderer {
                 this.drawGoldBorder(x, y, 50, 40);
             }
             
+            // Night-time window lights (lit windows when powered)
+            if (atNight && household.satisfaction >= 0.5) {
+                this.drawWindowLights(x, y, 50, 40, household.tier);
+            }
+            
+            // Satisfaction bubbles/indicator above powered households
+            if (!isPaused && household.satisfaction >= 0.5) {
+                this.drawSatisfactionBubble(x + 25, y - 8, household.satisfaction);
+            }
+            
             // Check for events affecting this household
             const affectingEvent = activeEvents.find(e => 
                 e.affectedHousehold === household.id || 
@@ -657,6 +724,47 @@ class WorldRenderer {
                 this.drawStatusDot(x + 45, y + 5, affectingEvent.severity);
             }
         });
+    }
+
+    // Draw glowing lit windows on a building at night
+    drawWindowLights(x, y, width, height, tier) {
+        const ctx = this.ctx;
+        // Window positions vary by tier; use approximate lit-window rects
+        const windows = tier === 'corporate'
+            ? [{ wx: 0.15, wy: 0.25 }, { wx: 0.5, wy: 0.25 }, { wx: 0.15, wy: 0.55 }, { wx: 0.5, wy: 0.55 }]
+            : tier === 'business'
+            ? [{ wx: 0.12, wy: 0.35 }, { wx: 0.42, wy: 0.35 }, { wx: 0.72, wy: 0.35 }]
+            : tier === 'family'
+            ? [{ wx: 0.16, wy: 0.32 }, { wx: 0.6, wy: 0.32 }]
+            : [{ wx: 0.2, wy: 0.32 }]; // cabin
+
+        ctx.save();
+        ctx.fillStyle = '#ffdf5e';
+        ctx.shadowColor = '#ffdf5e';
+        ctx.shadowBlur = 8;
+        windows.forEach(w => {
+            ctx.fillRect(x + w.wx * width, y + w.wy * height, 7, 7);
+        });
+        ctx.restore();
+    }
+
+    // Draw a small floating bubble indicating household satisfaction
+    drawSatisfactionBubble(cx, cy, satisfaction) {
+        const ctx = this.ctx;
+        const bob = Math.sin(Date.now() * 0.004 + cx) * 3; // gentle bob
+        const color = satisfaction > 0.7 ? Theme.colors.green : satisfaction > 0.4 ? Theme.colors.amber : Theme.colors.red;
+        const icon = satisfaction > 0.7 ? '▲' : satisfaction > 0.4 ? '◆' : '▼';
+
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = color;
+        ctx.font = Theme.font(10);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.fillText(icon, cx, cy + bob);
+        ctx.restore();
     }
     
     // Draw a gold border around tier4/elite equipment

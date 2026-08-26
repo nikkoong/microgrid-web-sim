@@ -286,7 +286,7 @@ const Game = {
         this.uiElements.push(generationBar, storageBar, consumptionBar);
         
         // Time display button
-        const timeButton = new Button(20, 10, 220, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright, textAlign: 'left' });
+        const timeButton = new Button(20, 10, 220, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright, textAlign: 'left', fontSize: '13px' });
         this.uiElements.push(timeButton);
         
         // Pause/Play button
@@ -305,7 +305,7 @@ const Game = {
         this.uiElements.push(pauseButton);
         
         // Weather info
-        const weatherButton = new Button(20, 50, 220, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright, textAlign: 'left' });
+        const weatherButton = new Button(20, 50, 220, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright, textAlign: 'left', fontSize: '12px' });
         this.uiElements.push(weatherButton);
         
         // Stats panel - left pane, below energy bars, same bottom as shop panel
@@ -1059,12 +1059,21 @@ const Game = {
         
         // Don't update game state if paused
         if (this.gameState && this.gameState.initialized && !this.isPaused) {
+            const prevMoney = this.gameState.money;
             this.gameState.update(deltaTime);
+            // Coin popups when money increased (income earned)
+            const gained = this.gameState.money - prevMoney;
+            if (gained > 0 && this.worldRenderer && this.worldRenderer.addIncomeEffects) {
+                this.worldRenderer.addIncomeEffects(gained);
+            }
         }
 
         // Update systems - only update particles when not paused
         if (!this.isPaused) {
             this.particleSystem.update(deltaTime);
+        }
+        if (this.worldRenderer && this.worldRenderer.updateFloatTexts) {
+            this.worldRenderer.updateFloatTexts(deltaTime);
         }
         this.notificationSystem.update(currentTime);
 

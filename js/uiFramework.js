@@ -363,7 +363,7 @@ class NotificationSystem {
         // Animate notifications sliding to their target positions
         this.notifications.forEach((notif, index) => {
             // Target Y is based on index (0 = top/newest, higher index = further down)
-            const targetY = index * 44;  // 44px spacing between notifications
+            const targetY = index * 38;  // 38px spacing between notifications
             
             // Smooth slide animation
             if (notif.currentY === undefined) {
@@ -378,8 +378,8 @@ class NotificationSystem {
 
     render(ctx, x, y) {
         const notifWidth = this.notifWidth;
-        const notifHeight = 40;
-        const stripeWidth = 6;
+        const notifHeight = 34;
+        const stripeWidth = 5;
         
         this.notifications.forEach((notif, index) => {
             // Calculate actual Y position (y is the base, notifications stack downward)
@@ -398,7 +398,7 @@ class NotificationSystem {
                 
                 // Dark text for gold notifications
                 ctx.fillStyle = Theme.colors.bgBase;
-                ctx.font = Theme.font(12);
+                ctx.font = Theme.font(10);
             } else {
                 // Standard dark background
                 ctx.fillStyle = Theme.colors.panelBgAlt;
@@ -410,18 +410,18 @@ class NotificationSystem {
                 
                 // Light text for standard notifications
                 ctx.fillStyle = Theme.colors.textBright;
-                ctx.font = Theme.font(12);
+                ctx.font = Theme.font(10);
             }
             
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             
             // Word wrap for long messages
-            const textStartX = notif.severity === 'gold' ? x + 10 : x + stripeWidth + 10;
-            const maxWidth = notif.severity === 'gold' ? notifWidth - 20 : notifWidth - stripeWidth - 20;
+            const textStartX = notif.severity === 'gold' ? x + 9 : x + stripeWidth + 8;
+            const maxWidth = notif.severity === 'gold' ? notifWidth - 18 : notifWidth - stripeWidth - 16;
             const words = notif.message.split(' ');
             let line = '';
-            let yOffset = 8;
+            let yOffset = 6;
             
             for (let word of words) {
                 const testLine = line + word + ' ';
@@ -430,7 +430,7 @@ class NotificationSystem {
                 if (metrics.width > maxWidth && line !== '') {
                     ctx.fillText(line, textStartX, notifY + yOffset);
                     line = word + ' ';
-                    yOffset += 14;
+                    yOffset += 12;
                 } else {
                     line = testLine;
                 }
