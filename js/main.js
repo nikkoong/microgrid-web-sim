@@ -1167,8 +1167,8 @@ const Game = {
         // Reset context transform for high-DPI
         this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
         
-        // Clear canvas with background
-        this.ctx.fillStyle = '#90ee90';
+        // Clear canvas with background (dark CRT green — world sits on dark theme)
+        this.ctx.fillStyle = Theme.colors.bgBase;
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         // Apply camera transform for world rendering
