@@ -44,37 +44,13 @@ class GameState {
         this.eventSystem = null; // Will be initialized after construction
         
         // Goal/progression system
-        // Goal 1: 3 Basic Cabins at 75% satisfaction
-        // Goal 2: 5 Family Homes at 80% satisfaction
-        // Goal 3: 2 Corporate HQs + 3 Small Businesses at 85% satisfaction
         this.goals = [
-            { 
-                id: 1, 
-                description: 'Power 3 Basic Cabins with 75%+ satisfaction', 
-                target: 3, 
-                satisfactionThreshold: 0.75, 
-                requiredType: 'cabin',
-                completed: false, 
-                unlocked: true 
-            },
-            { 
-                id: 2, 
-                description: 'Power 5 Family Homes with 80%+ satisfaction', 
-                target: 5, 
-                satisfactionThreshold: 0.80, 
-                requiredType: 'family',
-                completed: false, 
-                unlocked: false 
-            },
-            { 
-                id: 3, 
-                description: 'Power 2 Corporate HQs and 3 Small Businesses with 85%+ satisfaction', 
-                target: { corporate: 2, business: 3 },
-                satisfactionThreshold: 0.85, 
-                requiredType: 'corporate_business',  // Special: needs 2 corporate + 3 business
-                completed: false, 
-                unlocked: false 
-            }
+            { id: 1, description: 'Power 3 Basic Cabins with 75%+ satisfaction', target: 3, satisfactionThreshold: 0.75, requiredType: 'cabin', completed: false, unlocked: true },
+            { id: 2, description: 'Research Advanced Cells (Solar tier 2)', researchGoal: 'solar_t2', completed: false, unlocked: false },
+            { id: 3, description: 'Power 5 Family Homes with 80%+ satisfaction', target: 5, satisfactionThreshold: 0.80, requiredType: 'family', completed: false, unlocked: false },
+            { id: 4, description: 'Research Deep-Cycle Packs (Battery tier 2) and power 3 homes above 80%', researchGoal: 'stor_t2', target: 3, satisfactionThreshold: 0.80, requiredType: 'any', completed: false, unlocked: false },
+            { id: 5, description: 'Power 3 Small Businesses with 85%+ satisfaction', target: 3, satisfactionThreshold: 0.85, requiredType: 'business', completed: false, unlocked: false },
+            { id: 6, description: 'Power 2 Corporate HQs and reach net-zero (surplus >= 0)', requireCorporate: 2, requireNetZero: true, completed: false, unlocked: false }
         ];
         this.currentGoalIndex = 0;
         this.gameWon = false;
@@ -564,75 +540,53 @@ class GameState {
     }
     
     updateGoalProgress() {
-        if (this.gameWon) return; // Don't update if already won
-        
+        if (this.gameWon) return;
         const currentGoal = this.goals[this.currentGoalIndex];
         if (!currentGoal || currentGoal.completed) return;
-        
+
         let goalMet = false;
-        
-        if (currentGoal.requiredType === 'corporate_business') {
-            // Goal 3 (new): Need 2 Corporate HQs + 3 Small Businesses at threshold
-            const corporateCount = this.households.filter(h => 
-                h.tier === 'corporate' && 
-                h.satisfaction >= currentGoal.satisfactionThreshold
-            ).length;
-            const businessCount = this.households.filter(h => 
-                h.tier === 'business' && 
-                h.satisfaction >= currentGoal.satisfactionThreshold
-            ).length;
-            
-            goalMet = corporateCount >= currentGoal.target.corporate && 
-                      businessCount >= currentGoal.target.business;
-        } else if (currentGoal.requiredType === 'all') {
-            // Legacy Goal 3: Need 3 of EACH type at threshold
-            const cabinCount = this.households.filter(h => 
-                h.tier === 'cabin' && 
-                h.satisfaction >= currentGoal.satisfactionThreshold
-            ).length;
-            const familyCount = this.households.filter(h => 
-                h.tier === 'family' && 
-                h.satisfaction >= currentGoal.satisfactionThreshold
-            ).length;
-            const businessCount = this.households.filter(h => 
-                h.tier === 'business' && 
-                h.satisfaction >= currentGoal.satisfactionThreshold
-            ).length;
-            
-            goalMet = cabinCount >= currentGoal.target && 
-                      familyCount >= currentGoal.target && 
-                      businessCount >= currentGoal.target;
-        } else {
-            // Goals 1 & 2: Count specific type
-            const satisfiedHouseholds = this.households.filter(h => {
-                return h.tier === currentGoal.requiredType && 
-                       h.satisfaction >= currentGoal.satisfactionThreshold;
-            }).length;
-            
-            goalMet = satisfiedHouseholds >= currentGoal.target;
+
+        // Research-based goal: a specific research node must be unlocked
+        if (currentGoal.researchGoal) {
+            const node = this.getResearchNode(
+                currentGoal.researchGoal.startsWith('solar') ? 'solar' :
+                currentGoal.researchGoal.startsWith('stor') ? 'storage' : 'buildings',
+                currentGoal.researchGoal
+            );
+            goalMet = !!(node && node.unlocked);
         }
-        
-        // Check if goal is complete
+        // Corporate + net-zero goal
+        else if (currentGoal.requireNetZero) {
+            const corpCount = this.households.filter(h => h.tier === 'corporate' && h.satisfaction >= 0.85).length;
+            goalMet = corpCount >= currentGoal.requireCorporate && this.energy.surplus >= 0;
+        }
+        // Any-type count goal (households of any tier above threshold)
+        else if (currentGoal.requiredType === 'any') {
+            const count = this.households.filter(h => h.satisfaction >= currentGoal.satisfactionThreshold).length;
+            goalMet = count >= currentGoal.target;
+        }
+        // Type-specific count goal (existing logic)
+        else {
+            const satisfied = this.households.filter(h =>
+                h.tier === currentGoal.requiredType &&
+                h.satisfaction >= currentGoal.satisfactionThreshold
+            ).length;
+            goalMet = satisfied >= currentGoal.target;
+        }
+
         if (goalMet) {
             currentGoal.completed = true;
-            
-            // Award $500 bonus for completing the goal
             this.money += 500;
-            
-            // Notify UI of goal completion (gold notification)
+            this.researchPoints += 30;
             if (window.Game && window.Game.notificationSystem) {
                 window.Game.notificationSystem.addNotification(
-                    `Goal Complete! "${currentGoal.description}" +$500 bonus!`,
-                    'gold'
+                    `Goal Complete! "${currentGoal.description}" +$500 +30 RP!`, 'gold'
                 );
             }
-            
-            // Unlock next goal
             if (this.currentGoalIndex + 1 < this.goals.length) {
                 this.currentGoalIndex++;
                 this.goals[this.currentGoalIndex].unlocked = true;
             } else {
-                // All goals completed - game won!
                 this.gameWon = true;
             }
         }
