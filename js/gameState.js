@@ -544,35 +544,36 @@ class GameState {
         const currentGoal = this.goals[this.currentGoalIndex];
         if (!currentGoal || currentGoal.completed) return;
 
-        let goalMet = false;
-
-        // Research-based goal: a specific research node must be unlocked
+        // Research requirement (a goal may require a research node and/or a count).
+        // Defaults to met when the goal has no research requirement.
+        let researchMet = true;
         if (currentGoal.researchGoal) {
             const node = this.getResearchNode(
                 currentGoal.researchGoal.startsWith('solar') ? 'solar' :
                 currentGoal.researchGoal.startsWith('stor') ? 'storage' : 'buildings',
                 currentGoal.researchGoal
             );
-            goalMet = !!(node && node.unlocked);
+            researchMet = !!(node && node.unlocked);
         }
-        // Corporate + net-zero goal
-        else if (currentGoal.requireNetZero) {
+
+        // Count requirement (corporate+net-zero, any-type, or type-specific).
+        // Defaults to met when the goal has no count requirement.
+        let countMet = true;
+        if (currentGoal.requireNetZero) {
             const corpCount = this.households.filter(h => h.tier === 'corporate' && h.satisfaction >= 0.85).length;
-            goalMet = corpCount >= currentGoal.requireCorporate && this.energy.surplus >= 0;
+            countMet = corpCount >= currentGoal.requireCorporate && this.energy.surplus >= 0;
+        } else if (currentGoal.requiredType) {
+            const count = (currentGoal.requiredType === 'any')
+                ? this.households.filter(h => h.satisfaction >= currentGoal.satisfactionThreshold).length
+                : this.households.filter(h =>
+                    h.tier === currentGoal.requiredType &&
+                    h.satisfaction >= currentGoal.satisfactionThreshold
+                ).length;
+            countMet = count >= currentGoal.target;
         }
-        // Any-type count goal (households of any tier above threshold)
-        else if (currentGoal.requiredType === 'any') {
-            const count = this.households.filter(h => h.satisfaction >= currentGoal.satisfactionThreshold).length;
-            goalMet = count >= currentGoal.target;
-        }
-        // Type-specific count goal (existing logic)
-        else {
-            const satisfied = this.households.filter(h =>
-                h.tier === currentGoal.requiredType &&
-                h.satisfaction >= currentGoal.satisfactionThreshold
-            ).length;
-            goalMet = satisfied >= currentGoal.target;
-        }
+
+        // Goal 4 combines BOTH a research requirement and a count requirement.
+        let goalMet = researchMet && countMet;
 
         if (goalMet) {
             currentGoal.completed = true;
@@ -603,8 +604,74 @@ class GameState {
     getGoalProgress() {
         const currentGoal = this.getCurrentGoal();
         if (!currentGoal) return { current: 0, target: 0, percentage: 100, detailed: null };
-        
-        if (currentGoal.requiredType === 'corporate_business') {
+
+        // Safe percentage: never divide by zero/undefined.
+        const safePercent = (current, target) => {
+            if (typeof target !== 'number' || !isFinite(target) || target <= 0) return 0;
+            return Math.min(100, Math.max(0, (current / target) * 100));
+        };
+        const getResearchUnlocked = (goal) => {
+            if (!goal.researchGoal) return true;
+            const node = this.getResearchNode(
+                goal.researchGoal.startsWith('solar') ? 'solar' :
+                goal.researchGoal.startsWith('stor') ? 'storage' : 'buildings',
+                goal.researchGoal
+            );
+            return !!(node && node.unlocked);
+        };
+
+        // Corporate + net-zero goal: corporate count contribution + surplus (clamped 0..1)
+        if (currentGoal.requireNetZero) {
+            const corpCount = this.households.filter(h =>
+                h.tier === 'corporate' && h.satisfaction >= 0.85
+            ).length;
+            const corpTarget = currentGoal.requireCorporate || 0;
+            const corpProgress = corpTarget > 0 ? Math.min(1, corpCount / corpTarget) : 1;
+            const surplusProgress = this.energy.surplus >= 0 ? 1 : 0;
+            const percentage = ((corpProgress + surplusProgress) / 2) * 100;
+            return {
+                current: corpCount,
+                target: corpTarget,
+                percentage,
+                detailed: {
+                    corporate: { current: corpCount, target: corpTarget },
+                    surplus: { value: this.energy.surplus, met: this.energy.surplus >= 0 }
+                }
+            };
+        }
+        // Research-based goal: progress is 0 or 1 based on node unlocked.
+        // A goal may combine research with a count requirement (e.g. goal 4),
+        // in which case the ratio blends the research state with the home count.
+        else if (currentGoal.researchGoal) {
+            const researchMet = getResearchUnlocked(currentGoal);
+            const hasCount = currentGoal.requiredType || typeof currentGoal.target === 'number';
+            if (hasCount) {
+                const count = currentGoal.requiredType === 'any'
+                    ? this.households.filter(h => h.satisfaction >= currentGoal.satisfactionThreshold).length
+                    : this.households.filter(h =>
+                        h.tier === currentGoal.requiredType &&
+                        h.satisfaction >= currentGoal.satisfactionThreshold
+                    ).length;
+                const countRatio = safePercent(count, currentGoal.target) / 100;
+                return {
+                    current: count,
+                    target: currentGoal.target,
+                    percentage: ((researchMet ? 1 : 0) + countRatio) / 2 * 100,
+                    detailed: { research: { met: researchMet }, homes: { current: count, target: currentGoal.target } }
+                };
+            }
+            return { current: researchMet ? 1 : 0, target: 1, percentage: researchMet ? 100 : 0, detailed: null };
+        }
+        // Any-type count goal (households of any tier above threshold)
+        else if (currentGoal.requiredType === 'any') {
+            const count = this.households.filter(h => h.satisfaction >= currentGoal.satisfactionThreshold).length;
+            return {
+                current: count,
+                target: currentGoal.target,
+                percentage: safePercent(count, currentGoal.target),
+                detailed: null
+            };
+        } else if (currentGoal.requiredType === 'corporate_business') {
             // Goal 3: Need 2 Corporate HQs + 3 Small Businesses at threshold
             const corporateCount = this.households.filter(h => 
                 h.tier === 'corporate' && 
@@ -624,7 +691,7 @@ class GameState {
             return {
                 current: totalAchieved,
                 target: totalNeeded,
-                percentage: (totalAchieved / totalNeeded) * 100,
+                percentage: safePercent(totalAchieved, totalNeeded),
                 detailed: {
                     corporate: { current: corporateCount, target: targetCorporate },
                     business: { current: businessCount, target: targetBusiness }
@@ -653,7 +720,7 @@ class GameState {
             return {
                 current: totalAchieved,
                 target: totalNeeded,
-                percentage: (totalAchieved / totalNeeded) * 100,
+                percentage: safePercent(totalAchieved, totalNeeded),
                 detailed: {
                     cabin: { current: cabinCount, target: currentGoal.target },
                     family: { current: familyCount, target: currentGoal.target },
@@ -669,10 +736,12 @@ class GameState {
                        h.satisfaction >= currentGoal.satisfactionThreshold;
             }).length;
             
+            const total = typeof currentGoal.target === 'number' ? currentGoal.target : 0;
+            
             return {
                 current: satisfiedHouseholds,
-                target: currentGoal.target,
-                percentage: (satisfiedHouseholds / currentGoal.target) * 100,
+                target: total,
+                percentage: safePercent(satisfiedHouseholds, total),
                 detailed: null
             };
         }
