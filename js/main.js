@@ -387,7 +387,7 @@ const Game = {
             textColor: Theme.colors.textBright,
             fontSize: '10px'
         });
-        researchButton.visible = !isMobileLayout;
+        researchButton.visible = true;
         this.uiElements.push(researchButton);
         this.researchButton = researchButton;
         
@@ -1106,6 +1106,15 @@ const Game = {
         
         if (!costs) {
             this.notificationSystem.addNotification('Cannot upgrade this item!', 'error');
+            return;
+        }
+        
+        // Research gate: upgrading into tiers 2-4 requires the matching research node
+        const researchBranch = this.selectedEntityType === 'solar' ? 'solar'
+            : this.selectedEntityType === 'battery' ? 'storage' : 'buildings';
+        const requiredNodeId = this.gameState.nodeIdFor(this.selectedEntityType, nextTier);
+        if (requiredNodeId && !this.gameState.isResearchUnlocked(researchBranch, requiredNodeId)) {
+            this.notificationSystem.addNotification('Research required to unlock this item!', 'error');
             return;
         }
         

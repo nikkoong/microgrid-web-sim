@@ -606,6 +606,32 @@ class GameState {
         return !!(node && node.unlocked);
     }
 
+    // Shared mapping: a type + tier → research node id, or null when no gate applies.
+    // type: 'solar'/'solar_panel', 'battery', 'household'.
+    // tier: 'tier2'..'tier4' for solar/battery, 'cabin'/'family'/'business'/'corporate' for households.
+    // Base tiers (tier1 / cabin) return null (always available).
+    nodeIdFor(type, tier) {
+        const t = tier || '';
+
+        if (type === 'household') {
+            return {
+                cabin: null,
+                family: 'bld_family',
+                business: 'bld_business',
+                corporate: 'bld_corp'
+            }[t] || null;
+        }
+
+        if (type === 'solar' || type === 'solar_panel' || type === 'battery') {
+            const m = String(t).match(/^tier(\d+)$/);
+            if (!m || m[1] === '1') return null; // base tier always available
+            const prefix = (type === 'solar' || type === 'solar_panel') ? 'solar_t' : 'stor_t';
+            return prefix + m[1];
+        }
+
+        return null;
+    }
+
     // Map an equipment catalog item to whether it's research-locked.
     // Solar/battery items: id like 'solar_tier2'/'battery_tier2' (no separate tier field).
     // Household items: carry a 'tier' field like 'cabin'/'family'.
@@ -617,17 +643,16 @@ class GameState {
             branch = type === 'solar_panel' ? 'solar' : 'storage';
             const m = (equipment.id || '').match(/_(tier\d+)$/);
             tierKey = m ? m[1] : 'tier1';
-            if (tierKey === 'tier1') return false; // base always available
-            return !this.isResearchUnlocked(branch, (branch === 'solar' ? 'solar_' : 'stor_') + tierKey.replace('tier', 't'));
-        }
-
-        if (type === 'household') {
+        } else if (type === 'household') {
+            branch = 'buildings';
             tierKey = equipment.tier || 'cabin';
-            if (tierKey === 'cabin') return false; // base always available
-            return !this.isResearchUnlocked('buildings', 'bld_' + tierKey);
+        } else {
+            return false;
         }
 
-        return false;
+        const nodeId = this.nodeIdFor(type, tierKey);
+        if (!nodeId) return false; // base always available
+        return !this.isResearchUnlocked(branch, nodeId);
     }
     
     getGoalProgress() {
