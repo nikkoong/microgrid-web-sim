@@ -335,7 +335,7 @@ class PurchaseManager {
 
 class ShopMenu extends Panel {
     constructor(x, y, width, height, purchaseManager) {
-        super(x, y, width, height, 'Equipment Shop');
+        super(x, y, width, height, ''); // No title — the folder-tab header (SHOP/RESEARCH) is drawn by main.js
         this.purchaseManager = purchaseManager;
         this.currentCategory = 'solar_panels';
         this.buttons = [];
@@ -396,15 +396,11 @@ class ShopMenu extends Panel {
         
         super.render(ctx);
         
-        // Money display in the shop header (title is drawn by Panel at x+10,y+10)
-        if (this.purchaseManager && this.purchaseManager.gameState) {
-            const money = this.purchaseManager.gameState.money;
-            ctx.fillStyle = Theme.colors.green;
-            ctx.font = Theme.font(10);
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'top';
-            ctx.fillText(`$${money.toFixed(0)}`, this.x + this.width - 10, this.y + 12);
-        }
+        // When the right-pane is showing the Research tab, the shop content
+        // (category + equipment buttons + tooltip) is hidden; only the panel
+        // background is drawn so the research content has a backdrop.
+        const showShopContent = !window.Game || !window.Game.shopTab || window.Game.shopTab === 'shop';
+        if (!showShopContent) return;
         
         // Draw shadow/underline effect on selected category button
         this.categoryButtons.forEach(button => {

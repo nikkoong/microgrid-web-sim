@@ -71,11 +71,11 @@ const Game = {
     selectedEntity: null,
     selectedEntityType: null, // 'solar', 'battery', 'household'
     
-    // Research panel state
-    researchPanelVisible: false,
+    // Research + shop tab state (right-pane folder tabs)
+    shopTab: 'shop',                      // 'shop' | 'research'
     researchNodeButtons: [],
-    researchButton: null,
     researchBranchHeaderYs: null,
+    shopTabRects: null,                    // { shop:{...}, research:{...} } derived each frame
     
     init() {
         this.canvas = document.getElementById('gameCanvas');
@@ -377,21 +377,7 @@ const Game = {
         this.uiElements.push(helpButton);
         
         // Research toggle button - right of the restart button
-        const researchButton = new Button(440, 10, 100, 30, 'RESEARCH', () => {
-            this.toggleResearchPanel();
-        }, { 
-            bgColor: Theme.colors.green,
-            hoverBgColor: Theme.colors.greenDark,
-            activeBgColor: Theme.colors.greenDark,
-            borderColor: Theme.colors.greenDim,
-            textColor: Theme.colors.textBright,
-            fontSize: '10px'
-        });
-        researchButton.visible = true;
-        this.uiElements.push(researchButton);
-        this.researchButton = researchButton;
-        
-        // Build research node buttons
+        // Build research node buttons (rendered inside the right-pane Research tab)
         this.buildResearchButtons();
         
         // Store references to frequently-updated HUD elements (avoid index drift)
@@ -435,7 +421,7 @@ const Game = {
         this.researchBranchHeaderYs = {};
         
         const bp = this.researchPanelBounds();
-        let y = bp.y + 48;
+        let y = bp.y + 44;
         
         const branches = ['solar', 'storage', 'buildings'];
         
@@ -468,7 +454,7 @@ const Game = {
     },
     
     researchPanelBounds() {
-        return { x: 962, y: 210, width: 215, height: 396 };
+        return { x: 960, y: 210, width: 215, height: 396 };
     },
     
     handleResearchClick(branch, id, cost) {
@@ -495,11 +481,10 @@ const Game = {
         this.notificationSystem.addNotification(`${node.name} researched!`, 'success');
     },
     
-    toggleResearchPanel() {
-        this.researchPanelVisible = !this.researchPanelVisible;
-        // Hide the shop menu while researching so the panel isn't cluttered
-        if (!(this.isMobile || this.isTouch) && this.shopMenu) {
-            this.shopMenu.visible = !this.researchPanelVisible;
+    setShopTab(tab) {
+        this.shopTab = tab;
+        if (this.shopMenu) {
+            this.shopMenu.visible = true; // shop stays; only its content changes
         }
     },
     
@@ -508,16 +493,8 @@ const Game = {
         
         const bp = this.researchPanelBounds();
         
-        // Panel background
-        const panel = new Panel(bp.x, bp.y, bp.width, bp.height, 'RESEARCH');
-        panel.render(this.ctx);
-        
-        // RP counter in header
-        this.ctx.fillStyle = Theme.colors.gold;
-        this.ctx.font = Theme.font(12);
-        this.ctx.textAlign = 'left';
-        this.ctx.textBaseline = 'top';
-        this.ctx.fillText(`RP: ${this.gameState.researchPoints}`, bp.x + 10, bp.y + 30);
+        // Research tab content: no separate panel bg (shop draws the panel), and no RP
+        // header (RP lives in the tab label). Just render branch labels + node buttons.
         
         // Branch labels + node state
         const branches = ['solar', 'storage', 'buildings'];
@@ -541,6 +518,71 @@ const Game = {
             }
             rbtn.button.render(this.ctx);
         });
+    },
+
+    // Folder-tab bar for the right pane: SHOP $<money> | RESEARCH <n> RP
+    renderRightPaneTabs(ctx) {
+        const bp = this.researchPanelBounds(); // same x/w as the shop panel
+        const tabH = 30;
+        const half = (bp.width) / 2;
+        const money = this.gameState ? this.gameState.money.toFixed(0) : 0;
+        const rp = this.gameState ? this.gameState.researchPoints : 0;
+
+        this.shopTabRects = {
+            shop: { x: bp.x, y: bp.y, width: half - 2, height: tabH },
+            research: { x: bp.x + half, y: bp.y, width: half - 2, height: tabH }
+        };
+
+        // Active tab is raised/lighter; inactive is recessed/darker
+        const tabs = [
+            { id: 'shop', label: `SHOP $${money}`, active: this.shopTab === 'shop' },
+            { id: 'research', label: `RESEARCH ${rp} RP`, active: this.shopTab === 'research' }
+        ];
+
+        tabs.forEach(tab => {
+            const r = this.shopTabRects[tab.id];
+            // Fill
+            ctx.fillStyle = tab.active ? Theme.colors.panelBgAlt : Theme.colors.panelBg;
+            ctx.fillRect(r.x, r.y, r.width, r.height);
+            // Bevel: active looks raised (lighter top), inactive recessed (darker)
+            ctx.fillStyle = tab.active ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.25)';
+            ctx.fillRect(r.x, r.y, r.width, 2);
+            ctx.fillRect(r.x, r.y, 2, r.height);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(r.x, r.y + r.height - 2, r.width, 2);
+            // Border
+            ctx.strokeStyle = tab.active ? Theme.colors.greenDim : Theme.colors.greenFaint;
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(r.x, r.y, r.width, r.height);
+            // Label
+            ctx.fillStyle = tab.active ? Theme.colors.textBright : Theme.colors.text;
+            ctx.font = Theme.font(10);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tab.label, r.x + r.width / 2, r.y + r.height / 2);
+        });
+
+        // A solid separator line under the active tab joins it to the content below
+        ctx.strokeStyle = Theme.colors.greenDim;
+        ctx.lineWidth = 1;
+        const activeRect = this.shopTabRects[this.shopTab];
+        ctx.beginPath();
+        ctx.moveTo(activeRect.x, activeRect.y + activeRect.height);
+        ctx.lineTo(activeRect.x + activeRect.width, activeRect.y + activeRect.height);
+        ctx.stroke();
+    },
+
+    // Returns true if the click hit a tab (and switches tabs)
+    handleRightPaneTabsClick(x, y) {
+        if (!this.shopTabRects) return false;
+        for (const id of ['shop', 'research']) {
+            const r = this.shopTabRects[id];
+            if (r && x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height) {
+                if (this.shopTab !== id) this.setShopTab(id);
+                return true;
+            }
+        }
+        return false;
     },
     
     // Device detection
@@ -679,6 +721,11 @@ const Game = {
             return true; // Block all clicks when help panel is shown
         }
         
+        // Handle right-pane folder tabs (SHOP / RESEARCH)
+        if (this.handleRightPaneTabsClick(screenX, screenY)) {
+            return true;
+        }
+        
         // Handle victory overlay button
         if (this.victoryOverlay && this.victoryButton) {
             if (this.isPointInRect(screenX, screenY, this.victoryButton)) {
@@ -734,8 +781,8 @@ const Game = {
             }
         }
         
-        // Handle research node buttons (research panel)
-        if (this.researchPanelVisible && this.researchNodeButtons) {
+        // Handle research node buttons (Research tab)
+        if (this.shopTab === 'research' && this.researchNodeButtons) {
             for (const rbtn of this.researchNodeButtons) {
                 if (!rbtn.button.disabled && rbtn.button.handleClick(screenX, screenY)) {
                     return true;
@@ -1438,9 +1485,12 @@ const Game = {
             this.renderHelpPanel();
         }
         
-        // Render research panel (right pane, below/over shop)
-        if (this.researchPanelVisible) {
+        // Render right-pane folder tabs + tab content (shop or research)
+        this.renderRightPaneTabs(this.ctx);
+        if (this.shopTab === 'research' && this.researchNodeButtons && this.researchNodeButtons.length) {
             this.renderResearchPanel();
+        } else if (this.shopTab === 'shop' && this.shopMenu && this.shopMenu.visible) {
+            // shopMenu renders via the uiElements loop; no extra call needed
         }
         
         // Debug: Show zoom level on mobile
@@ -1923,251 +1973,121 @@ const Game = {
         // Semi-transparent dark overlay
         this.ctx.fillStyle = Theme.colors.backdrops;
         this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        // Help panel (centered, larger to fit new content)
-        const panelX = 100;
-        const panelY = 30;
-        const panelW = 1000;
-        const panelH = 740;
-        
+
+        // Compact help panel (centered)
+        const panelW = 660;
+        const panelH = 360;
+        const panelX = (this.width - panelW) / 2;
+        const panelY = 110;
+
         // Panel background
         this.ctx.fillStyle = Theme.colors.panelBg;
         this.ctx.fillRect(panelX, panelY, panelW, panelH);
-        
-        // Purple border
         this.ctx.strokeStyle = Theme.colors.purple;
-        this.ctx.lineWidth = 4;
+        this.ctx.lineWidth = 3;
         this.ctx.strokeRect(panelX, panelY, panelW, panelH);
-        
+
         // Title
         this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(24);
+        this.ctx.font = Theme.font(16);
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('GAME HELP', panelX + panelW / 2, panelY + 40);
-        
-        // Content sections
-        let yPos = panelY + 70;
-        const leftMargin = panelX + 20;
-        const rightMargin = panelX + panelW / 2 + 20;
-        const lineHeight = 20;
-        
-        this.ctx.textAlign = 'left';
-        this.ctx.font = Theme.font(11);
-        
-        // LEFT COLUMN
-        
-        // Section 1: Game Objective
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(13);
-        this.ctx.fillText('GAME OBJECTIVE', leftMargin, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('Balance and upgrade your microgrid to build', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('more houses and keep them satisfied. Complete', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('all three goals to win!', leftMargin, yPos);
-        yPos += lineHeight + 8;
-        
-        // Section 2: Controls
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(13);
-        this.ctx.fillText('CONTROLS', leftMargin, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Click SHOP to buy equipment', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Click grid to place equipment', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Right-click or ESC to cancel placement', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Click equipment to select/upgrade/delete', leftMargin, yPos);
-        yPos += lineHeight + 8;
-        
-        // Section 3: Energy System
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(13);
-        this.ctx.fillText('ENERGY SYSTEM', leftMargin, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('Solar panels generate power during the day.', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Batteries store excess energy for nighttime.', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Households consume power 24/7.', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Weather and time affect solar generation.', leftMargin, yPos);
-        yPos += lineHeight + 4;
-        
-        this.ctx.fillStyle = Theme.colors.green;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('Solar Panel Tiers:', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('T1: 5kW, 85% eff | T2: 10kW, 90% eff', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('T3: 15kW, 95% eff | T4: 25kW, 98% (WEATHERPROOF)', leftMargin, yPos);
-        yPos += lineHeight + 4;
-        
-        this.ctx.fillStyle = Theme.colors.green;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('Battery Tiers:', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('T1: 10kWh, 90% eff | T2: 20kWh, 92% eff', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('T3: 40kWh, 95% eff | T4: 80kWh, 98% (SELF-HEALING)', leftMargin, yPos);
-        yPos += lineHeight + 8;
-        
-        // Section 4: Buildings
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(13);
-        this.ctx.fillText('BUILDINGS AND INCOME', leftMargin, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('Cabin: 1.0-1.5kW | Hourly: $8 + $5 satisfaction bonus', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Family Home: 3.0-4.5kW | Hourly: $16 + $10 satisfaction bonus', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Business: 6.0-9.0kW | Hourly: $30 (no bonus)', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Corporate HQ: 10.0-15.0kW | Hourly: $30-75 (Income Grows)', leftMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('Satisfaction bonus requires 70%+ uptime.', leftMargin, yPos);
-        yPos += lineHeight;
-        
-        // RIGHT COLUMN
-        yPos = panelY + 70;
-        
-        // Section 5: Events
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(13);
-        this.ctx.fillText('CRISIS EVENTS', rightMargin, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('Random events challenge your grid management:', rightMargin, yPos);
-        yPos += lineHeight + 4;
-        
-        this.ctx.fillStyle = Theme.severityColor('error');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Equipment Failure', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Solar/battery malfunction', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.severityColor('error');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Weather Storms', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Reduces solar generation', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.severityColor('warning');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Demand Spike', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Households use more power', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.severityColor('warning');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Battery Issue', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Discharge or efficiency drop', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.severityColor('warning');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Household Event', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Varies by household type', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.severityColor('info');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Maintenance', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Temporary efficiency boost', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.severityColor('success');
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Grid Bonus', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Money or energy boost', rightMargin + 150, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Special Event', rightMargin, yPos);
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText(' - Rare, high-impact events', rightMargin + 150, yPos);
-        yPos += lineHeight + 8;
-        
-        
-        // Strategy Tips Section
-        this.ctx.fillStyle = Theme.colors.purple;
-        this.ctx.font = Theme.font(13);
-        this.ctx.fillText('STRATEGY TIPS', rightMargin, yPos);
-        yPos += lineHeight;
-        
-        this.ctx.fillStyle = Theme.colors.text;
-        this.ctx.font = Theme.font(11);
-        this.ctx.fillText('• Build enough batteries for nighttime demand', rightMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Upgrade to Tier 4 for elite abilities', rightMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Monitor satisfaction to maximize income', rightMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Plan for weather changes and events', rightMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Balance equipment costs vs. income', rightMargin, yPos);
-        yPos += lineHeight;
-        this.ctx.fillText('• Click entities to see event status', rightMargin, yPos);
-        yPos += lineHeight;
-        
+        this.ctx.fillText('GAME HELP', panelX + panelW / 2, panelY + 26);
+
+        // Two-column block layout
+        const colX = [panelX + 20, panelX + panelW / 2 + 8];
+        const colW = panelW / 2 - 28;
+        let yPos = [];
+        const blockH = 20;
+        const gap = 14;
+
+        // ---------- Block renderer ----------
+        const block = (x, y, w, title, lines, color) => {
+            const h = blockH + lines.length * 16 + 10;
+            // Rounded block background
+            this.ctx.fillStyle = Theme.rgba(Theme.colors.panelBgAlt, 0.9);
+            this.ctx.fillRect(x, y, w, h);
+            this.ctx.strokeStyle = Theme.colors.greenFaint;
+            this.ctx.lineWidth = 1.5;
+            this.ctx.strokeRect(x, y, w, h);
+            // Title bar
+            this.ctx.fillStyle = Theme.rgba(color, 0.25);
+            this.ctx.fillRect(x, y, w, blockH);
+            this.ctx.strokeStyle = color;
+            this.ctx.strokeRect(x, y, w, blockH);
+            // Title text
+            this.ctx.fillStyle = color;
+            this.ctx.font = Theme.font(11);
+            this.ctx.textAlign = 'left';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText(title, x + 8, y + blockH / 2);
+            // Body lines
+            this.ctx.fillStyle = Theme.colors.text;
+            this.ctx.font = Theme.font(10);
+            lines.forEach((line, i) => {
+                this.ctx.fillText(line, x + 8, y + blockH + 10 + i * 16);
+            });
+            return y + h + gap;
+        };
+
+        // ---------- LEFT COLUMN ----------
+        let y = panelY + 44;
+
+        y = block(colX[0], y, colW, 'HOW TO PLAY', [
+            'Buy power + buildings, keep homes happy.',
+            'Meet each goal to progress and win.'
+        ], Theme.colors.purple);
+
+        y = block(colX[0], y, colW, 'CONTROLS', [
+            'Click SHOP tab to buy equipment.',
+            'Click the grid to place it.',
+            'Click equipment to select / upgrade / delete.'
+        ], Theme.colors.cyan);
+
+        y = block(colX[0], y, colW, 'ENERGY', [
+            'Solar: power by day.',
+            'Battery: stores for night.',
+            'Weather + time affect solar output.'
+        ], Theme.colors.green);
+
+        y = block(colX[0], y, colW, 'BUILDINGS', [
+            'Cabin $8+bonus / Family $16+bonus.',
+            'Business $30 / Corporate $30-75 (grows).',
+            'Bonus needs 70%+ satisfaction.'
+        ], Theme.colors.amber);
+
+        // ---------- RIGHT COLUMN ----------
+        let y2 = panelY + 44;
+
+        y2 = block(colX[1], y2, colW, 'RESEARCH', [
+            'Earn RP from satisfied homes (70%+ = 1, 85%+ = 2).',
+            'Unlock tech in 3 branches: Solar, Storage, Buildings.',
+            'Research gates higher tiers before you can buy them.',
+            'Higher tiers = more capacity + special abilities.'
+        ], Theme.colors.gold);
+
+        y2 = block(colX[1], y2, colW, 'CRISIS EVENTS', [
+            'Equipment Failure - gear malfunctions.',
+            'Weather Storms - solar output drops.',
+            'Demand Spike - homes use more.',
+            'Battery Issue - loses charge.',
+            'Household Event - varies by home.',
+            'Maintenance - temporary boost.',
+            'Grid Bonus - free money/energy.'
+        ], Theme.colors.red);
+
         // Close button (X) at top-right
-        const closeBtnX = panelX + panelW - 50;
-        const closeBtnY = panelY + 10;
-        const closeBtnSize = 35;
-        
-        // Store button bounds for click detection
+        const closeBtnX = panelX + panelW - 40;
+        const closeBtnY = panelY + 8;
+        const closeBtnSize = 30;
         this.helpCloseButton = { x: closeBtnX, y: closeBtnY, width: closeBtnSize, height: closeBtnSize };
-        
-        // Button hover effect
         const isHovered = this.mouseX >= closeBtnX && this.mouseX <= closeBtnX + closeBtnSize &&
                           this.mouseY >= closeBtnY && this.mouseY <= closeBtnY + closeBtnSize;
-        
         this.ctx.fillStyle = isHovered ? Theme.rgba(Theme.colors.red, 0.8) : Theme.colors.red;
         this.ctx.fillRect(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize);
-        this.ctx.strokeStyle = Theme.colors.red;
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(closeBtnX, closeBtnY, closeBtnSize, closeBtnSize);
-        
         this.ctx.fillStyle = Theme.colors.textBright;
-        this.ctx.font = Theme.font(20);
+        this.ctx.font = Theme.font(16);
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('X', closeBtnX + closeBtnSize / 2, closeBtnY + 10);
+        this.ctx.fillText('X', closeBtnX + closeBtnSize / 2, closeBtnY + 9);
     },
     
     // Helper for word-wrapping text (used by victory overlay)
