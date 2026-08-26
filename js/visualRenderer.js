@@ -357,10 +357,18 @@ class WorldRenderer {
         this.gridSize = 40;
         this.offsetX = 50;
         this.offsetY = 100;
+        // Playable canvas area — stretches across the width of the screen,
+        // leaves ~5% right margin for floating alerts.
+        this.playWidth = 1060;
+        this.playHeight = 560;
+        this.playRight = this.offsetX + this.playWidth;   // 1110
+        this.playBottom = this.offsetY + this.playHeight; // 660
     }
 
     render(isPaused = false) {
+        this.drawSky();
         this.drawGrid();
+        this.drawPlayAreaBorder();
         this.drawWeather(isPaused);
         // Draw connections and particles BEFORE entities (behind in z-order)
         this.drawConnections(isPaused);
@@ -371,12 +379,108 @@ class WorldRenderer {
         this.drawEntityLabels();
     }
 
+    // Green CRT border around the playable canvas area
+    drawPlayAreaBorder() {
+        const ctx = this.ctx;
+        ctx.strokeStyle = Theme.colors.greenDim;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.offsetX, this.offsetY, this.playWidth, this.playHeight);
+    }
+
+    // Dark green CRT sky gradient + glowing sun/moon based on time of day
+    drawSky() {
+        const ctx = this.ctx;
+        const time = this.gameState.time % 24;
+        const x = this.offsetX;
+        const y = this.offsetY;
+        const w = this.playWidth;
+        const h = this.playHeight;
+
+        // Dark green CRT sky gradient (subtle vertical shift by time of day)
+        const grad = ctx.createLinearGradient(x, y, x, y + h);
+        grad.addColorStop(0, '#101c12');
+        grad.addColorStop(1, '#0b120c');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, w, h);
+
+        // Sun (daytime) or Moon (night) — moves across the sky with a phosphor glow
+        // Sun: 06:00 to 18:00, Moon: 18:00 to 06:00
+        this.drawSunMoon(ctx, time, x, y, w, h);
+    }
+
+    // Draw a glowing sun (day) or moon (night) that arcs across the sky
+    drawSunMoon(ctx, time, x, y, w, h) {
+        const isDay = time >= 6 && time < 18;
+        // Normalize sun path: progress 0..1 across the day (6→18) or night (18→6 next day)
+        let progress;
+        if (isDay) {
+            progress = (time - 6) / 12;                  // 0 (sunrise) → 1 (sunset)
+        } else {
+            // Night: moves from 18:00 → 24:00 and 0:00 → 6:00
+            progress = time >= 18 ? (time - 18) / 12 : (time + 6) / 12;
+        }
+
+        // Arc across the sky: left (rise) to right (set), arcing upward in middle
+        const cx = x + (w * 0.1) + progress * (w * 0.8);
+        const arcBase = y + h * 0.45;
+        const arcH = h * 0.42;
+        const cy = arcBase - Math.sin(progress * Math.PI) * arcH;
+        const radius = 24;
+
+        if (isDay) {
+            // Glowing sun
+            ctx.save();
+            ctx.fillStyle = '#f5e04a';
+            ctx.shadowColor = Theme.colors.gold;
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Sun rays
+            ctx.strokeStyle = 'rgba(245, 224, 74, 0.4)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(a) * (radius + 8), cy + Math.sin(a) * (radius + 8));
+                ctx.lineTo(cx + Math.cos(a) * (radius + 18), cy + Math.sin(a) * (radius + 18));
+                ctx.stroke();
+            }
+        } else {
+            // Glowing moon (crescent)
+            ctx.save();
+            ctx.fillStyle = '#d8e8d0';
+            ctx.shadowColor = Theme.colors.green;
+            ctx.shadowBlur = 24;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Crescent cutout
+            ctx.fillStyle = '#101c12';
+            ctx.beginPath();
+            ctx.arc(cx + radius * 0.5, cy - radius * 0.2, radius * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Stars
+            ctx.fillStyle = 'rgba(216, 232, 208, 0.7)';
+            for (let i = 0; i < 20; i++) {
+                const sx = x + ((i * 53) % w);
+                const sy = y + ((i * 37) % (h * 0.4));
+                ctx.fillRect(sx, sy, 2, 2);
+            }
+        }
+    }
+
     drawGrid() {
         this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         this.ctx.lineWidth = 1;
 
-        const width = this.gameState?.solarPanels?.length > 0 ? 600 : 400;
-        const height = this.gameState?.batteries?.length > 0 ? 400 : 300;
+        const width = this.playWidth;
+        const height = this.playHeight;
 
         for (let x = this.offsetX; x < this.offsetX + width; x += this.gridSize) {
             this.ctx.beginPath();
@@ -397,10 +501,10 @@ class WorldRenderer {
         if (!this.gameState || !this.gameState.weather) return;
 
         const time = this.gameState.time % 24;
-        const width = 600;
-        const height = 400;
+        const width = this.playWidth;
+        const height = this.playHeight;
 
-        // Draw Night Overlay
+        // Draw Night Overlay (dark green CRT tint at night)
         if (time < 6 || time > 18) {
              let darkness = 0.5; // Base darkness
              
@@ -409,7 +513,7 @@ class WorldRenderer {
              if (time > 5 && time < 6) darkness = 0.5 * (6 - time);
              if (time >= 19 || time <= 5) darkness = 0.7; // Full night
 
-             this.ctx.fillStyle = `rgba(0, 0, 50, ${darkness})`;
+             this.ctx.fillStyle = Theme.rgba(Theme.colors.bgBase, darkness);
              this.ctx.fillRect(this.offsetX, this.offsetY, width, height);
         }
 

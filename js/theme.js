@@ -13,11 +13,11 @@ window.Theme = {
         panelBgAlt: '#0b0f0a',
         backdrops: 'rgba(0,0,0,0.85)',
 
-        // Phosphor greens
-        green: '#33ff66',
-        greenDark: '#1fbf40',
-        greenDim: '#2e8b57',
-        greenFaint: '#1a3d24',
+        // Phosphor greens (darker than terminal green #4AF262)
+        green: '#2fa03e',
+        greenDark: '#23802f',
+        greenDim: '#1c5a26',
+        greenFaint: '#133a1a',
 
         // Functional accents
         gold: '#ffd700',
@@ -25,6 +25,7 @@ window.Theme = {
         red: '#ff3b30',
         cyan: '#00e5ff',
         purple: '#b57bff',
+        darkBlue: '#1f3a5f',
 
         // Text
         text: '#b8ffc4',
@@ -103,9 +104,9 @@ window.Theme = {
                 if (!opts.bgColor) bg = this.colors.greenDark;
                 if (!opts.borderColor) border = this.colors.green;
             } else if (hover) {
-                glow = this.colors.greenDim;
-                if (!opts.bgColor) bg = this.colors.panelBg;
-                if (!opts.borderColor) border = this.colors.greenDim;
+                glow = this.colors.green;
+                if (!opts.bgColor) bg = this.colors.greenDim;
+                if (!opts.borderColor) border = this.colors.green;
             }
         }
 

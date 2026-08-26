@@ -225,7 +225,7 @@ const Game = {
             this.createMobileUI();
         } else {
             // Desktop shop menu
-            this.shopMenu = new ShopMenu(900, 100, 280, 400, this.purchaseManager);
+            this.shopMenu = new ShopMenu(330, 450, 290, 400, this.purchaseManager);
             this.shopMenu.visible = false;
             this.uiElements.push(this.shopMenu);
         }
@@ -274,7 +274,7 @@ const Game = {
         
         // Shop button (with money display) - different behavior on mobile
         const moneyButton = new Button(
-            isMobileLayout ? 1050 : 1050, 10, 140, 40,
+            isMobileLayout ? 1050 : 1010, 690, 150, 45,
             'SHOP - $1000',
             () => {
                 if (isMobileLayout && this.mobileShopDrawer) {
@@ -301,9 +301,9 @@ const Game = {
         const barHeight = isMobileLayout ? 22 : 30;
         const barSpacing = isMobileLayout ? 28 : 40;
         
-        const generationBar = new EnergyBar(barX, barY, barWidth, barHeight, 50, 0, '#1e90ff', 'Gen');
-        const storageBar = new EnergyBar(barX, barY + barSpacing, barWidth, barHeight, 100, 0, '#00ff00', 'Stor');
-        const consumptionBar = new EnergyBar(barX, barY + barSpacing * 2, barWidth, barHeight, 50, 0, '#ff6b6b', 'Use');
+        const generationBar = new EnergyBar(barX, barY, barWidth, barHeight, 50, 0, Theme.colors.green, 'Gen');
+        const storageBar = new EnergyBar(barX, barY + barSpacing, barWidth, barHeight, 100, 0, Theme.colors.darkBlue, 'Stor');
+        const consumptionBar = new EnergyBar(barX, barY + barSpacing * 2, barWidth, barHeight, 50, 0, Theme.colors.red, 'Use');
         
         this.uiElements.push(generationBar, storageBar, consumptionBar);
         
@@ -317,9 +317,11 @@ const Game = {
             pauseButton.text = this.isPaused ? 'Play' : 'Pause';
             this.notificationSystem.addNotification(this.isPaused ? 'Game paused' : 'Game resumed', 'info');
         }, { 
-            bgColor: Theme.colors.cyan,
-            hoverBgColor: Theme.colors.cyan,
-            activeBgColor: Theme.colors.cyan,
+            bgColor: Theme.colors.green,
+            hoverBgColor: Theme.colors.greenDark,
+            activeBgColor: Theme.colors.greenDark,
+            borderColor: Theme.colors.greenDim,
+            textColor: Theme.colors.textBright,
             fontSize: '14px'
         });
         this.uiElements.push(pauseButton);
@@ -347,17 +349,33 @@ const Game = {
         const goalPanel = new Panel(goalX, goalY, goalWidth, goalHeight, 'Current Goal');
         this.uiElements.push(goalPanel);
         
-        // Start New Game button - hide on mobile (access via menu instead)
-        const newGameButton = new Button(900, 10, 140, 40, 'Start New Game', () => {
-            if (confirm('Start a new game? All progress will be lost!')) {
-                this.resetGame();
-                this.notificationSystem.addNotification('New game started!', 'success');
-            }
+        // Restart button (redo icon) - placed right of the help (?) button
+        // Uses a confirmation dialog instead of native confirm()
+        const newGameButton = new Button(390, 10, 40, 30, '\u21ba', () => {
+            if (this.dialog) this.dialog.visible = false;
+            this.dialog = new Dialog(
+                400, 300, 400, 160,
+                'Are you sure you want to restart the simulation?',
+                [
+                    { text: 'Yes, restart', onClick: () => {
+                        this.dialog = null;
+                        this.resetGame();
+                        this.notificationSystem.addNotification('Simulation restarted!', 'success');
+                    }},
+                    { text: 'No, keep going', onClick: () => {
+                        this.dialog = null;
+                    }}
+                ]
+            );
+            this.dialog.visible = true;
         }, { 
-            fontSize: '12px',
-            bgColor: Theme.colors.amber,
-            hoverBgColor: Theme.colors.red,
-            activeBgColor: Theme.colors.red
+            bgColor: Theme.colors.green,
+            hoverBgColor: Theme.colors.greenDark,
+            activeBgColor: Theme.colors.greenDark,
+            borderColor: Theme.colors.greenDim,
+            textColor: Theme.colors.textBright,
+            fontSize: '18px',
+            fontWeight: 'bold'
         });
         newGameButton.visible = !isMobileLayout;
         this.uiElements.push(newGameButton);
@@ -366,9 +384,11 @@ const Game = {
         const helpButton = new Button(340, 10, 40, 30, '?', () => {
             this.helpPanelVisible = !this.helpPanelVisible;
         }, { 
-            bgColor: Theme.colors.purple,
-            hoverBgColor: Theme.colors.purple,
-            activeBgColor: Theme.colors.purple,
+            bgColor: Theme.colors.green,
+            hoverBgColor: Theme.colors.greenDark,
+            activeBgColor: Theme.colors.greenDark,
+            borderColor: Theme.colors.greenDim,
+            textColor: Theme.colors.textBright,
             fontSize: '18px',
             fontWeight: 'bold'
         });
@@ -1154,7 +1174,7 @@ const Game = {
             }
             
             // Create new shop menu
-            this.shopMenu = new ShopMenu(900, 100, 280, 400, this.purchaseManager);
+            this.shopMenu = new ShopMenu(330, 450, 290, 400, this.purchaseManager);
             this.shopMenu.visible = shopWasVisible;
             this.uiElements.push(this.shopMenu);
         }
@@ -1217,11 +1237,9 @@ const Game = {
             this.renderSelectionUI();
         }
 
-        // Render notifications - position adjusted for mobile
-        // On mobile: align top edge with stats panel area (Y ~580)
-        // On desktop: middle area
-        const notifX = (this.isMobile || this.isTouch) ? 500 : 500;
-        const notifY = (this.isMobile || this.isTouch) ? 580 : 470;
+        // Render notifications - top-right corner, overlapping right edge of play area
+        const notifX = 840;
+        const notifY = 15;
         this.notificationSystem.render(this.ctx, notifX, notifY);
         
         // Render mobile UI elements (on top of regular UI)
