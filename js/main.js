@@ -742,6 +742,12 @@ const Game = {
     
     // Placement System Methods
     startPlacement(equipment) {
+        // Reject research-locked items before deducting money / entering placement
+        if (this.gameState.isEquipmentLocked && this.gameState.isEquipmentLocked(equipment)) {
+            this.notificationSystem.addNotification('Research required to unlock this item!', 'error');
+            return;
+        }
+
         // Check if player can afford it before entering placement mode
         if (!this.purchaseManager.canAfford(equipment.cost)) {
             this.notificationSystem.addNotification(`Not enough money! Need $${equipment.cost}!`, 'error');

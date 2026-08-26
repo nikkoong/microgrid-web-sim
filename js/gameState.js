@@ -618,7 +618,7 @@ class GameState {
             const m = (equipment.id || '').match(/_(tier\d+)$/);
             tierKey = m ? m[1] : 'tier1';
             if (tierKey === 'tier1') return false; // base always available
-            return !this.isResearchUnlocked(branch, (branch === 'solar' ? 'solar_' : 'stor_') + tierKey);
+            return !this.isResearchUnlocked(branch, (branch === 'solar' ? 'solar_' : 'stor_') + tierKey.replace('tier', 't'));
         }
 
         if (type === 'household') {
