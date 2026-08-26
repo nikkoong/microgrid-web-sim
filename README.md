@@ -5,7 +5,8 @@ The Solar Microgrid Management Game is a browser-based simulation where you mana
 
 [Play at https://solarmicrogrid.vercel.app/](https://solarmicrogrid.vercel.app/)
 
-![Game Play](image.png)
+![gameplay](gameplay.png)
+![microgrid](microgrid.png)
 
 ## Gameplay & Mechanics
 
@@ -24,12 +25,7 @@ The Solar Microgrid Management Game is a browser-based simulation where you mana
 ### Controls
 *   **PC**: Mouse click to interact with UI buttons and place buildings.
 *   **Mobile**: Touch controls with pinch-to-zoom support for navigating the grid.
-
-## Mobile Support (Work in Progress)
-We are currently actively developing mobile support with the following targets:
-*   High-resolution rendering (Retina/High DPI)
-*   Full touch interface support
-*   Responsive UI that adapts to phone and tablet screens
+*   Best enjoyed on desktop, not recommended for mobile.
 
 ## Technical Details
 
@@ -39,7 +35,7 @@ We are currently actively developing mobile support with the following targets:
 *   **State Management**: Centralized `GameState` class.
 *   **Rendering**: Custom procedural rendering engine with particle effects for energy flow.
 
-### Running the Game
+### Testing the Game
 Since there are no build steps, you just need to serve the files:
 
 **Option 1: Python**
@@ -52,20 +48,4 @@ python -m http.server 8000
 npx http-server -p 8000
 ```
 
-Then visit `http://localhost:8000`
-
-## Development
-See `AGENTS.md` for coding conventions and `tasks.md` for the development roadmap.
-
-## Changelog
-
-### 2026-01-31 - Mobile UI Improvements
-- **Camera System**: Added pinch-to-zoom and pan controls for mobile devices
-- **Mobile UI Components**: Implemented slide-out drawer for shop, bottom sheet for entity selection
-- **Touch Gestures**: Added touch drag for placement mode, long-press for entity selection
-- **Layout Fixes**: 
-  - Centered goal panel in landscape mode
-  - Moved energy bars to bottom-left to avoid overlapping game grid
-  - Made stats panel visible on mobile with proper background positioning
-  - Repositioned notifications to bottom area aligned with stats
-  - Added affordability check to upgrade button (grays out when insufficient funds)
+Then visit `http://localhost:8000`. It's hosted as a static site on Vercel at [https://solarmicrogrid.vercel.app/](https://solarmicrogrid.vercel.app/).
