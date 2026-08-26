@@ -502,19 +502,27 @@ const Game = {
         
         this.ctx.font = Theme.font(10);
         this.ctx.textBaseline = 'top';
+        this.ctx.textAlign = 'left';
         for (const branch of branches) {
             const headerY = this.researchBranchHeaderYs[branch];
             this.ctx.fillStyle = Theme.colors.textBright;
-            this.ctx.fillText(branchLabels[branch], bp.x + 10, headerY);
+            this.ctx.fillText(branchLabels[branch], bp.x + 12, headerY);
         }
         
-        // Render each node button, updating locked/unlocked state
+        // Render each node button. Unlock-gated: nodes whose prerequisite tier is
+        // not yet researched are grayed out / non-interactive.
         this.researchNodeButtons.forEach(rbtn => {
             const node = this.gameState.getResearchNode(rbtn.branch, rbtn.id);
-            if (node && node.unlocked) {
+            if (!node) return;
+            if (node.unlocked) {
                 rbtn.button.setDisabled(true);
             } else {
-                rbtn.button.setDisabled(false);
+                // Sequential gate: previous node in branch must be unlocked
+                const nodes = this.gameState.research[rbtn.branch];
+                const idx = nodes.indexOf(node);
+                const prereqMet = idx === 0 || nodes[idx - 1].unlocked;
+                rbtn.button.setDisabled(!prereqMet);
+                rbtn.button.style.textColor = prereqMet ? Theme.colors.textBright : Theme.colors.textDim;
             }
             rbtn.button.render(this.ctx);
         });
@@ -1976,9 +1984,9 @@ const Game = {
 
         // Compact help panel (centered)
         const panelW = 660;
-        const panelH = 360;
+        const panelH = 420;
         const panelX = (this.width - panelW) / 2;
-        const panelY = 110;
+        const panelY = 100;
 
         // Panel background
         this.ctx.fillStyle = Theme.colors.panelBg;

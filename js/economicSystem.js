@@ -394,13 +394,22 @@ class ShopMenu extends Panel {
         // Don't render anything if not visible
         if (!this.visible) return;
         
-        super.render(ctx);
-        
         // When the right-pane is showing the Research tab, the shop content
         // (category + equipment buttons + tooltip) is hidden; only the panel
         // background is drawn so the research content has a backdrop.
         const showShopContent = !window.Game || !window.Game.shopTab || window.Game.shopTab === 'shop';
-        if (!showShopContent) return;
+        
+        // Draw just the panel background (no children) when showing the Research tab
+        if (!showShopContent) {
+            Theme.panel(ctx, this.x, this.y, this.width, this.height, {
+                bgColor: this.style.bgColor,
+                borderColor: this.style.borderColor,
+                borderWidth: this.style.borderWidth
+            });
+            return;
+        }
+        
+        super.render(ctx);
         
         // Draw shadow/underline effect on selected category button
         this.categoryButtons.forEach(button => {
