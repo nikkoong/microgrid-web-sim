@@ -52,16 +52,16 @@ class Button extends UIElement {
         this.text = text;
         this.onClick = onClick;
         this.style = {
-            bgColor: style.bgColor || '#ff6b6b', // Default red
-            hoverBgColor: style.hoverBgColor || '#ee5a52',
-            activeBgColor: style.activeBgColor || '#d63031',
-            borderColor: style.borderColor || '#d63031',
-            textColor: style.textColor || '#ffffff',
-            disabledBgColor: style.disabledBgColor || '#a0a0a0',
-            disabledTextColor: style.disabledTextColor || '#666666',
-            disabledBorderColor: style.disabledBorderColor || '#888888',
+            bgColor: style.bgColor || Theme.colors.red,
+            hoverBgColor: style.hoverBgColor || Theme.colors.red,
+            activeBgColor: style.activeBgColor || Theme.colors.greenDark,
+            borderColor: style.borderColor || Theme.colors.red,
+            textColor: style.textColor || Theme.colors.textBright,
+            disabledBgColor: style.disabledBgColor || Theme.colors.panelBgAlt,
+            disabledTextColor: style.disabledTextColor || Theme.colors.textDim,
+            disabledBorderColor: style.disabledBorderColor || Theme.colors.greenFaint,
             fontSize: style.fontSize || '16px',
-            fontFamily: style.fontFamily || 'monospace'
+            fontFamily: style.fontFamily || Theme.fonts.ui
         };
         this.hovered = false;
         this.clicked = false;
@@ -98,16 +98,12 @@ class Button extends UIElement {
 
         // Draw button with slight offset when pressed (touch feedback)
         const pressOffset = this.clicked ? 2 : 0;
-        
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(this.x + pressOffset, this.y + pressOffset, this.width, this.height);
-
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = this.clicked ? 3 : 2; // Thicker border when pressed
-        ctx.strokeRect(this.x + pressOffset, this.y + pressOffset, this.width, this.height);
+        Theme.button(ctx, this.x + pressOffset, this.y + pressOffset, this.width, this.height, {
+            bgColor, borderColor, hover: this.hovered, pressed: this.clicked, disabled: this.disabled
+        });
 
         ctx.fillStyle = textColor;
-        ctx.font = `bold ${this.style.fontSize} ${this.style.fontFamily}`;
+        ctx.font = Theme.font(parseInt(this.style.fontSize, 10));
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
@@ -151,30 +147,24 @@ class Panel extends UIElement {
         super(x, y, width, height);
         this.title = title;
         this.style = {
-            bgColor: style.bgColor || '#f5f5dc',
-            borderColor: style.borderColor || '#4a4a4a',
+            bgColor: style.bgColor || Theme.colors.panelBg,
+            borderColor: style.borderColor || Theme.colors.greenFaint,
             borderWidth: style.borderWidth || 3,
-            textColor: style.textColor || '#2b2b2b',
+            textColor: style.textColor || Theme.colors.text,
             fontSize: style.fontSize || '14px',
-            fontFamily: style.fontFamily || 'monospace',
-            borderRadius: style.borderRadius || 8
+            fontFamily: style.fontFamily || Theme.fonts.ui,
+            borderRadius: style.borderRadius || 4
         };
     }
 
     render(ctx) {
         if (!this.visible) return;
 
-        ctx.fillStyle = this.style.bgColor;
-        ctx.strokeStyle = this.style.borderColor;
-        ctx.lineWidth = this.style.borderWidth;
-
-        this.roundRect(ctx, this.x, this.y, this.width, this.height, this.style.borderRadius);
-        ctx.fill();
-        ctx.stroke();
+        Theme.panel(ctx, this.x, this.y, this.width, this.height, { bgColor: this.style.bgColor, borderColor: this.style.borderColor, borderWidth: this.style.borderWidth });
 
         if (this.title) {
             ctx.fillStyle = this.style.textColor;
-            ctx.font = `bold ${this.style.fontSize} ${this.style.fontFamily}`;
+            ctx.font = Theme.font(parseInt(this.style.fontSize, 10));
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             ctx.fillText(this.title, this.x + 10, this.y + 10);
@@ -234,7 +224,7 @@ class Dialog extends Panel {
         super.render(ctx);
 
         ctx.fillStyle = this.style.textColor;
-        ctx.font = `${this.style.fontSize} ${this.style.fontFamily}`;
+        ctx.font = Theme.font(parseInt(this.style.fontSize, 10));
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         
@@ -314,18 +304,18 @@ class EnergyBar extends UIElement {
 
         const fillWidth = Math.min((this.currentValue / this.maxValue) * this.width, this.width);
 
-        ctx.fillStyle = '#333333';
+        ctx.fillStyle = Theme.colors.panelBgAlt;
         ctx.fillRect(this.x, this.y, this.width, this.height);
 
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, fillWidth, this.height);
 
-        ctx.strokeStyle = '#000000';
+        ctx.strokeStyle = Theme.colors.greenFaint;
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x, this.y, this.width, this.height);
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '12px monospace';
+        ctx.fillStyle = Theme.colors.textBright;
+        ctx.font = Theme.font(12);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const label = `${this.label}: ${this.currentValue.toFixed(1)}/${this.maxValue.toFixed(1)}`;
@@ -362,14 +352,7 @@ class NotificationSystem {
     }
 
     getSeverityColor(severity) {
-        // Returns stripe color for left edge
-        switch (severity) {
-            case 'error': return '#d63031';    // Red
-            case 'warning': return '#fdcb6e';  // Yellow/Orange
-            case 'success': return '#00b894';  // Green
-            case 'gold': return '#ffd700';     // Gold for special achievements
-            default: return '#74b9ff';         // Light blue for info
-        }
+        return Theme.severityColor(severity);
     }
 
     update(currentTime) {
@@ -406,7 +389,7 @@ class NotificationSystem {
             // Special gold styling for achievement notifications
             if (notif.severity === 'gold') {
                 // Gold background for achievements
-                ctx.fillStyle = '#ffd700';
+                ctx.fillStyle = Theme.colors.gold;
                 ctx.fillRect(x, notifY, notifWidth, notifHeight);
                 
                 // Dark border for contrast
@@ -414,21 +397,21 @@ class NotificationSystem {
                 ctx.lineWidth = 2;
                 ctx.strokeRect(x, notifY, notifWidth, notifHeight);
                 
-                // Black bold text for gold notifications
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 12px monospace';
+                // Dark text for gold notifications
+                ctx.fillStyle = Theme.colors.bgBase;
+                ctx.font = Theme.font(12);
             } else {
                 // Standard dark background
-                ctx.fillStyle = '#2d3436';
+                ctx.fillStyle = Theme.colors.panelBgAlt;
                 ctx.fillRect(x, notifY, notifWidth, notifHeight);
                 
                 // Colored stripe on left edge based on severity
                 ctx.fillStyle = notif.color;
                 ctx.fillRect(x, notifY, stripeWidth, notifHeight);
                 
-                // White text for standard notifications
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '12px monospace';
+                // Light text for standard notifications
+                ctx.fillStyle = Theme.colors.textBright;
+                ctx.font = Theme.font(12);
             }
             
             ctx.textAlign = 'left';
@@ -478,10 +461,10 @@ class MobileDrawer extends UIElement {
         this.openX = edge === 'right' ? 1200 - width : 0;
         
         this.style = {
-            bgColor: 'rgba(45, 52, 54, 0.95)',
-            borderColor: '#4a4a4a',
-            titleColor: '#ffffff',
-            handleColor: '#6c5ce7'
+            bgColor: 'rgba(13, 15, 10, 0.95)',
+            borderColor: Theme.colors.greenFaint,
+            titleColor: Theme.colors.textBright,
+            handleColor: Theme.colors.purple
         };
         
         // Content area (scrollable in future)
@@ -566,8 +549,8 @@ class MobileDrawer extends UIElement {
             ctx.fillRect(this.x - handleWidth, handleY, handleWidth, handleHeight);
             
             // Draw arrow on handle
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px monospace';
+            ctx.fillStyle = Theme.colors.textBright;
+            ctx.font = Theme.font(20);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(this.isOpen ? '›' : '‹', this.x - handleWidth / 2, handleY + handleHeight / 2);
@@ -576,7 +559,7 @@ class MobileDrawer extends UIElement {
         // Draw title
         if (this.title) {
             ctx.fillStyle = this.style.titleColor;
-            ctx.font = 'bold 18px monospace';
+            ctx.font = Theme.font(18);
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
             ctx.fillText(this.title, this.x + 15, this.y + 15);
@@ -585,10 +568,10 @@ class MobileDrawer extends UIElement {
         // Draw close X button
         const closeX = this.x + this.width - 35;
         const closeY = this.y + 10;
-        ctx.fillStyle = '#ff6b6b';
+        ctx.fillStyle = Theme.colors.red;
         ctx.fillRect(closeX, closeY, 25, 25);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = Theme.colors.textBright;
+        ctx.font = Theme.font(16);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('×', closeX + 12.5, closeY + 12.5);
@@ -654,10 +637,10 @@ class MobileBottomSheet extends UIElement {
         this.openY = 800 - height;
         
         this.style = {
-            bgColor: 'rgba(45, 52, 54, 0.98)',
-            borderColor: '#4a4a4a',
-            titleColor: '#ffffff',
-            handleColor: '#666666'
+            bgColor: 'rgba(13, 15, 10, 0.98)',
+            borderColor: Theme.colors.greenFaint,
+            titleColor: Theme.colors.textBright,
+            handleColor: Theme.colors.greenDim
         };
     }
     
@@ -721,7 +704,7 @@ class MobileBottomSheet extends UIElement {
         // Draw title
         if (this.title) {
             ctx.fillStyle = this.style.titleColor;
-            ctx.font = 'bold 16px monospace';
+            ctx.font = Theme.font(16);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(this.title, this.x + this.width / 2, this.y + 25);
@@ -788,11 +771,11 @@ class MobileShopContent extends UIElement {
                 cat.text,
                 () => this.setCategory(cat.category),
                 {
-                    bgColor: isSelected ? '#6c5ce7' : '#4a4a4a',
-                    hoverBgColor: '#5f27cd',
-                    activeBgColor: '#341f97',
-                    borderColor: isSelected ? '#a55eea' : '#666666',
-                    textColor: '#ffffff',
+                    bgColor: isSelected ? Theme.colors.greenDark : Theme.colors.panelBgAlt,
+                    hoverBgColor: Theme.colors.greenDim,
+                    activeBgColor: Theme.colors.greenDark,
+                    borderColor: isSelected ? Theme.colors.greenDim : Theme.colors.greenFaint,
+                    textColor: Theme.colors.textBright,
                     fontSize: '11px'
                 }
             );
@@ -811,8 +794,8 @@ class MobileShopContent extends UIElement {
         // Update category button styling
         this.categoryButtons.forEach(btn => {
             const isSelected = btn.category === category;
-            btn.style.bgColor = isSelected ? '#6c5ce7' : '#4a4a4a';
-            btn.style.borderColor = isSelected ? '#a55eea' : '#666666';
+            btn.style.bgColor = isSelected ? Theme.colors.greenDark : Theme.colors.panelBgAlt;
+            btn.style.borderColor = isSelected ? Theme.colors.greenDim : Theme.colors.greenFaint;
         });
         
         this.renderEquipmentButtons();
@@ -858,14 +841,14 @@ class MobileShopContent extends UIElement {
                     }
                 },
                 {
-                    bgColor: eq.special ? '#3d3d6b' : '#2d3436',
-                    hoverBgColor: '#4a4a4a',
-                    activeBgColor: '#1e272e',
-                    borderColor: eq.special ? '#ffd700' : '#666666',
-                    textColor: canAfford ? '#ffffff' : '#888888',
-                    disabledBgColor: '#1a1a1a',
-                    disabledTextColor: '#555555',
-                    disabledBorderColor: '#333333',
+                    bgColor: eq.special ? Theme.colors.panelBgAlt : Theme.colors.panelBg,
+                    hoverBgColor: Theme.colors.greenFaint,
+                    activeBgColor: Theme.colors.bgBase,
+                    borderColor: eq.special ? Theme.colors.gold : Theme.colors.greenFaint,
+                    textColor: canAfford ? Theme.colors.textBright : Theme.colors.textDim,
+                    disabledBgColor: Theme.colors.bgBase,
+                    disabledTextColor: Theme.colors.textDim,
+                    disabledBorderColor: Theme.colors.greenFaint,
                     fontSize: '12px'
                 }
             );
@@ -889,7 +872,7 @@ class MobileShopContent extends UIElement {
             if (button.equipmentCost !== undefined) {
                 const canAfford = currentMoney >= button.equipmentCost;
                 button.setDisabled(!canAfford);
-                button.style.textColor = canAfford ? '#ffffff' : '#888888';
+                button.style.textColor = canAfford ? Theme.colors.textBright : Theme.colors.textDim;
             }
         });
     }
@@ -899,8 +882,8 @@ class MobileShopContent extends UIElement {
         
         // Draw money display
         if (this.purchaseManager && this.purchaseManager.gameState) {
-            ctx.fillStyle = '#00b894';
-            ctx.font = 'bold 14px monospace';
+            ctx.fillStyle = Theme.colors.green;
+            ctx.font = Theme.font(14);
             ctx.textAlign = 'right';
             ctx.fillText(`$${this.purchaseManager.gameState.money.toFixed(0)}`, this.x + this.width - 10, this.y - 10);
         }
@@ -913,8 +896,8 @@ class MobileShopContent extends UIElement {
                 const labelX = button.x + button.width - 80;
                 const labelY = button.y + 5;
                 
-                ctx.fillStyle = '#ffd700';
-                ctx.font = 'bold 8px monospace';
+                ctx.fillStyle = Theme.colors.gold;
+                ctx.font = Theme.font(8);
                 ctx.textAlign = 'left';
                 ctx.fillText(button.equipment.special.name, labelX, labelY + 8);
             }
@@ -951,8 +934,8 @@ class MobileSelectionContent extends UIElement {
         let yOffset = this.y + 50;
         
         // Entity info
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '14px monospace';
+        ctx.fillStyle = Theme.colors.textBright;
+        ctx.font = Theme.font(14);
         ctx.textAlign = 'left';
         
         // ID and type
@@ -961,12 +944,12 @@ class MobileSelectionContent extends UIElement {
         
         // Tier
         const tier = this.entity.tier || 'tier1';
-        ctx.fillStyle = tier === 'tier4' || tier === 'corporate' ? '#ffd700' : '#aaaaaa';
+        ctx.fillStyle = tier === 'tier4' || tier === 'corporate' ? Theme.colors.gold : Theme.colors.textDim;
         ctx.fillText(`Tier: ${tier.replace('tier', '')}`, this.x + padding, yOffset);
         yOffset += 25;
         
         // Type-specific stats
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = Theme.colors.textBright;
         switch (this.entityType) {
             case 'solar':
                 ctx.fillText(`Capacity: ${this.entity.capacity} kW`, this.x + padding, yOffset);
@@ -983,7 +966,7 @@ class MobileSelectionContent extends UIElement {
             case 'household':
                 ctx.fillText(`Load: ${this.entity.baseLoad}-${(this.entity.baseLoad + this.entity.variableLoad).toFixed(1)} kW`, this.x + padding, yOffset);
                 yOffset += 20;
-                const satColor = this.entity.satisfaction > 0.7 ? '#00b894' : this.entity.satisfaction > 0.4 ? '#fdcb6e' : '#d63031';
+                const satColor = this.entity.satisfaction > 0.7 ? Theme.colors.green : this.entity.satisfaction > 0.4 ? Theme.colors.amber : Theme.colors.red;
                 ctx.fillStyle = satColor;
                 ctx.fillText(`Satisfaction: ${(this.entity.satisfaction * 100).toFixed(0)}%`, this.x + padding, yOffset);
                 break;
@@ -1023,14 +1006,14 @@ class MobileSelectionContent extends UIElement {
             
             const isDisabled = isMaxTier || !canAfford;
             
-            ctx.fillStyle = isDisabled ? '#666666' : '#00b894';
+            ctx.fillStyle = isDisabled ? Theme.colors.panelBgAlt : Theme.colors.green;
             ctx.fillRect(this.x + padding, buttonY, buttonWidth, 45);
-            ctx.strokeStyle = isDisabled ? '#444444' : '#00a884';
+            ctx.strokeStyle = isDisabled ? Theme.colors.greenFaint : Theme.colors.greenDark;
             ctx.lineWidth = 2;
             ctx.strokeRect(this.x + padding, buttonY, buttonWidth, 45);
             
-            ctx.fillStyle = isDisabled ? '#999999' : '#ffffff';
-            ctx.font = 'bold 12px monospace';
+            ctx.fillStyle = isDisabled ? Theme.colors.textDim : Theme.colors.textBright;
+            ctx.font = Theme.font(12);
             ctx.textAlign = 'center';
             
             // Show different text based on state
@@ -1052,14 +1035,14 @@ class MobileSelectionContent extends UIElement {
         const deleteX = this.entityType !== 'household' ? this.x + padding + buttonWidth + 10 : this.x + padding;
         const deleteWidth = this.entityType !== 'household' ? buttonWidth : this.width - 30;
         
-        ctx.fillStyle = '#d63031';
+        ctx.fillStyle = Theme.colors.red;
         ctx.fillRect(deleteX, buttonY, deleteWidth, 45);
-        ctx.strokeStyle = '#c0392b';
+        ctx.strokeStyle = Theme.colors.red;
         ctx.lineWidth = 2;
         ctx.strokeRect(deleteX, buttonY, deleteWidth, 45);
         
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px monospace';
+        ctx.fillStyle = Theme.colors.textBright;
+        ctx.font = Theme.font(12);
         ctx.textAlign = 'center';
         ctx.fillText('SELL (50%)', deleteX + deleteWidth / 2, buttonY + 28);
         
