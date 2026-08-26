@@ -239,8 +239,6 @@ class Dialog extends Panel {
                 ctx.fillText(prefix + option.text, this.x + 20, startY + index * 30);
             });
         }
-
-        super.render(ctx);
     }
 
     wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -326,10 +324,11 @@ class EnergyBar extends UIElement {
 }
 
 class NotificationSystem {
-    constructor() {
+    constructor(width = 350) {
         this.notifications = [];
-        this.maxNotifications = 6; // Show up to 6 notifications
+        this.maxNotifications = 4; // Show only the 4 most recent
         this.notificationDuration = 5000;
+        this.notifWidth = width;
     }
 
     addNotification(message, severity = 'info') {
@@ -364,7 +363,7 @@ class NotificationSystem {
         // Animate notifications sliding to their target positions
         this.notifications.forEach((notif, index) => {
             // Target Y is based on index (0 = top/newest, higher index = further down)
-            const targetY = index * 55;  // 55px spacing between notifications
+            const targetY = index * 44;  // 44px spacing between notifications
             
             // Smooth slide animation
             if (notif.currentY === undefined) {
@@ -378,8 +377,8 @@ class NotificationSystem {
     }
 
     render(ctx, x, y) {
-        const notifWidth = 350;
-        const notifHeight = 45;
+        const notifWidth = this.notifWidth;
+        const notifHeight = 40;
         const stripeWidth = 6;
         
         this.notifications.forEach((notif, index) => {

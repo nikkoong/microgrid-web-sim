@@ -355,13 +355,12 @@ class WorldRenderer {
         this.spriteManager = spriteManager;
         this.particleSystem = particleSystem;
         this.gridSize = 40;
-        this.offsetX = 50;
+        this.offsetX = 250;
         this.offsetY = 100;
-        // Playable canvas area — stretches across the width of the screen,
-        // leaves ~5% right margin for floating alerts.
-        this.playWidth = 1060;
+        // Playable canvas area — centered between the left (metrics) and right (alerts/shop) panes.
+        this.playWidth = 700;
         this.playHeight = 560;
-        this.playRight = this.offsetX + this.playWidth;   // 1110
+        this.playRight = this.offsetX + this.playWidth;   // 950
         this.playBottom = this.offsetY + this.playHeight; // 660
     }
 

@@ -224,9 +224,9 @@ const Game = {
         if (this.isMobile || this.isTouch) {
             this.createMobileUI();
         } else {
-            // Desktop shop menu
-            this.shopMenu = new ShopMenu(330, 450, 290, 400, this.purchaseManager);
-            this.shopMenu.visible = false;
+            // Desktop shop menu - always visible, in the right pane
+            this.shopMenu = new ShopMenu(960, 210, 215, 400, this.purchaseManager);
+            this.shopMenu.visible = true;
             this.uiElements.push(this.shopMenu);
         }
     },
@@ -272,32 +272,10 @@ const Game = {
         // Adjust positions based on device type
         const isMobileLayout = this.isMobile || this.isTouch;
         
-        // Shop button (with money display) - different behavior on mobile
-        const moneyButton = new Button(
-            isMobileLayout ? 1050 : 1010, 690, 150, 45,
-            'SHOP - $1000',
-            () => {
-                if (isMobileLayout && this.mobileShopDrawer) {
-                    this.mobileShopDrawer.toggle();
-                } else if (this.shopMenu) {
-                    this.shopMenu.visible = !this.shopMenu.visible;
-                }
-            },
-            { 
-                bgColor: Theme.colors.green, 
-                hoverBgColor: Theme.colors.greenDark,
-                activeBgColor: Theme.colors.greenDark,
-                borderColor: Theme.colors.greenDim,
-                textColor: Theme.colors.textBright 
-            }
-        );
-        this.uiElements.push(moneyButton);
-        
-        // Energy bars - on mobile: bottom-left, vertical, outside the grid area
-        // On desktop: left side middle area
-        const barX = 20;
-        const barY = isMobileLayout ? 640 : 450;  // Mobile: near bottom, Desktop: middle
-        const barWidth = isMobileLayout ? 180 : 300;
+        // Energy bars - mobile: bottom-left; desktop: left pane, outside the play area
+        const barX = 8;
+        const barY = isMobileLayout ? 640 : 450;  // Mobile: near bottom, Desktop: middle-left pane
+        const barWidth = isMobileLayout ? 180 : 210;
         const barHeight = isMobileLayout ? 22 : 30;
         const barSpacing = isMobileLayout ? 28 : 40;
         
@@ -327,34 +305,32 @@ const Game = {
         this.uiElements.push(pauseButton);
         
         // Weather info
-        const weatherButton = new Button(20, 50, 300, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright });
+        const weatherButton = new Button(20, 50, 200, 30, '', () => {}, { bgColor: 'transparent', borderColor: 'transparent', textColor: Theme.colors.textBright });
         this.uiElements.push(weatherButton);
         
-        // Stats panel - visible on both mobile and desktop, repositioned for mobile
-        // Mobile: bottom-left area (below energy bars would overlap, so put it to the right of bars)
-        // Desktop: bottom-left
-        const statsPanelX = isMobileLayout ? 210 : 20;
+        // Stats panel - left pane, outside the play area
+        const statsPanelX = isMobileLayout ? 210 : 8;
         const statsPanelY = isMobileLayout ? 580 : 580;
-        const statsPanelWidth = isMobileLayout ? 280 : 300;
+        const statsPanelWidth = isMobileLayout ? 280 : 212;
         const statsPanelHeight = isMobileLayout ? 210 : 230;
         const statsPanel = new Panel(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight, 'Grid Statistics');
-        statsPanel.visible = true;  // Always visible now
+        statsPanel.visible = true;
         this.uiElements.push(statsPanel);
         
-        // Goal panel - centered on mobile landscape, fixed position on desktop
-        const goalWidth = isMobileLayout ? 400 : 400;
+        // Goal panel - stays near top, shifted right so the restart button doesn't cover it
+        const goalWidth = isMobileLayout ? 400 : 380;
         const goalHeight = isMobileLayout ? 80 : 110;
-        const goalX = isMobileLayout ? (this.width - goalWidth) / 2 : 400;  // Center horizontally on mobile
+        const goalX = isMobileLayout ? (this.width - goalWidth) / 2 : 450;  // right of the restart button
         const goalY = isMobileLayout ? 50 : 10;
         const goalPanel = new Panel(goalX, goalY, goalWidth, goalHeight, 'Current Goal');
         this.uiElements.push(goalPanel);
         
         // Restart button (redo icon) - placed right of the help (?) button
-        // Uses a confirmation dialog instead of native confirm()
+        // Opens a confirmation dialog at the top-center of the screen
         const newGameButton = new Button(390, 10, 40, 30, '\u21ba', () => {
             if (this.dialog) this.dialog.visible = false;
             this.dialog = new Dialog(
-                400, 300, 400, 160,
+                430, 130, 340, 150,
                 'Are you sure you want to restart the simulation?',
                 [
                     { text: 'Yes, restart', onClick: () => {
@@ -396,6 +372,9 @@ const Game = {
         
         // Help panel (hidden by default)
         this.helpPanelVisible = false;
+        
+        // NotificationSystem width — right pane, fits under max right-pane width
+        this.notificationSystem.notifWidth = 212;
         
         // Mobile-specific: Cancel button for placement mode
         if (this.isMobile || this.isTouch) {
@@ -781,7 +760,7 @@ const Game = {
             this.touchHandler.panningDisabled = true;
         }
         
-        if (this.shopMenu) {
+        if (this.shopMenu && (this.isMobile || this.isTouch)) {
             this.shopMenu.visible = false;
         }
         
@@ -849,8 +828,8 @@ const Game = {
         this.selectedEntity = entity;
         this.selectedEntityType = type;
         
-        // Close shop menu when selecting entity
-        if (this.shopMenu) {
+        // Close shop menu when selecting entity (desktop shop stays open)
+        if (this.shopMenu && (this.isMobile || this.isTouch)) {
             this.shopMenu.visible = false;
         }
         
@@ -1174,7 +1153,7 @@ const Game = {
             }
             
             // Create new shop menu
-            this.shopMenu = new ShopMenu(330, 450, 290, 400, this.purchaseManager);
+            this.shopMenu = new ShopMenu(960, 210, 215, 400, this.purchaseManager);
             this.shopMenu.visible = shopWasVisible;
             this.uiElements.push(this.shopMenu);
         }
@@ -1237,9 +1216,9 @@ const Game = {
             this.renderSelectionUI();
         }
 
-        // Render notifications - top-right corner, overlapping right edge of play area
-        const notifX = 840;
-        const notifY = 15;
+        // Render notifications - top-right corner, in the right pane (outside play area)
+        const notifX = 968;
+        const notifY = 10;
         this.notificationSystem.render(this.ctx, notifX, notifY);
         
         // Render mobile UI elements (on top of regular UI)
@@ -1301,14 +1280,8 @@ const Game = {
         
         const gs = this.gameState;
         
-        // Update shop button text with money
-        const moneyButton = this.uiElements[0];
-        if (moneyButton) {
-            moneyButton.text = `SHOP - $${gs.money.toFixed(0)}`;
-        }
-        
         // Update time button with day/night indicator
-        const timeButton = this.uiElements[4];
+        const timeButton = this.uiElements[3];
         if (timeButton) {
             const hour = Math.floor(gs.time % 24);
             const day = Math.floor(gs.time / 24);
@@ -1318,7 +1291,7 @@ const Game = {
         }
         
         // Update weather button
-        const weatherButton = this.uiElements[6];
+        const weatherButton = this.uiElements[5];
         if (weatherButton) {
             const cloudPercent = (gs.weather.cloudCover * 100).toFixed(0);
             const intensityPercent = (gs.getSolarIntensity() * 100).toFixed(0);
@@ -1327,9 +1300,9 @@ const Game = {
         
         // Update energy bars with dynamic max values
         if (gs.energy) {
-            const generationBar = this.uiElements[1];
-            const storageBar = this.uiElements[2];
-            const consumptionBar = this.uiElements[3];
+            const generationBar = this.uiElements[0];
+            const storageBar = this.uiElements[1];
+            const consumptionBar = this.uiElements[2];
             
             if (generationBar) {
                 // Update max based on total solar capacity
@@ -1356,7 +1329,7 @@ const Game = {
         }
         
         // Update stats panel
-        const statsPanel = this.uiElements[7];
+        const statsPanel = this.uiElements[6];
         if (statsPanel && statsPanel.visible) {
             // Calculate average satisfaction
             const avgSatisfaction = gs.households.length > 0 
@@ -1382,7 +1355,7 @@ const Game = {
         }
         
         // Update goal panel
-        const goalPanel = this.uiElements[8];
+        const goalPanel = this.uiElements[7];
         if (goalPanel && gs.getCurrentGoal) {
             const currentGoal = gs.getCurrentGoal();
             const progress = gs.getGoalProgress();

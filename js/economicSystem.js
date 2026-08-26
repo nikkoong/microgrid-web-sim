@@ -356,10 +356,10 @@ class ShopMenu extends Panel {
         categoryConfigs.forEach((btn, index) => {
             const isSelected = btn.category === this.currentCategory;
             const button = new Button(
-                this.x + 10 + index * 85,
-                this.y + 35,
-                80,
-                30,
+                this.x + 6 + index * 68,
+                this.y + 32,
+                64,
+                28,
                 btn.text,
                 () => this.setCategory(btn.category),
                 {
@@ -368,7 +368,7 @@ class ShopMenu extends Panel {
                     activeBgColor: Theme.colors.greenFaint,
                     borderColor: Theme.colors.greenFaint,
                     textColor: Theme.colors.textBright,
-                    fontSize: '12px'
+                    fontSize: '11px'
                 }
             );
             button.category = btn.category;  // Store category reference
@@ -391,6 +391,16 @@ class ShopMenu extends Panel {
         if (!this.visible) return;
         
         super.render(ctx);
+        
+        // Money display in the shop header (title is drawn by Panel at x+10,y+10)
+        if (this.purchaseManager && this.purchaseManager.gameState) {
+            const money = this.purchaseManager.gameState.money;
+            ctx.fillStyle = Theme.colors.green;
+            ctx.font = Theme.font(10);
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`$${money.toFixed(0)}`, this.x + this.width - 10, this.y + 12);
+        }
         
         // Draw shadow/underline effect on selected category button
         this.categoryButtons.forEach(button => {
