@@ -187,76 +187,148 @@ class SpriteManager {
         }
     }
 
+    // Draw a small colored tier badge (T2/T3/T4) above researched equipment
+    drawTierBadge(ctx, x, y, tier) {
+        if (!tier || tier === 'tier1') return;
+        const colors = Theme.colors.tierColors || {};
+        const color = colors[tier] || Theme.colors.green;
+        const label = tier.replace('tier', 'T').toUpperCase();
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = color;
+        ctx.font = Theme.font(7);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, y);
+        ctx.restore();
+    }
+
     drawSolarPanel(ctx, x, y, width, height, tier) {
-        // Panel frame
-        ctx.fillStyle = '#4a4a4a';
-        ctx.fillRect(x, y, width, height);
-        
-        // Color based on tier: green (tier1), baby blue (tier2), purple (tier3), gold (tier4)
-        let cellColor = '#2ecc71'; // tier1 - green
-        if (tier === 'tier2') {
-            cellColor = '#74b9ff'; // tier2 - baby blue
-        } else if (tier === 'tier3') {
-            cellColor = '#a55eea'; // tier3 - purple
-        } else if (tier === 'tier4') {
-            cellColor = '#f1c40f'; // tier4 - gold (Elite Solar Array)
-        }
-        
-        // Cells
-        ctx.fillStyle = cellColor;
-        const cellWidth = (width - 10) / 3;
-        const cellHeight = (height - 10) / 3;
-        
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
-                ctx.fillRect(x + 5 + i * cellWidth, y + 5 + j * cellHeight, cellWidth - 2, cellHeight - 2);
+        const colors = Theme.colors.tierColors || {};
+        const color = colors[tier] || colors.tier1 || Theme.colors.green;
+        const frame = '#4a4a4a';
+        const line = '#ffffff';
+
+        // Draw a single framed panel with an n×m grid of colored cells
+        const drawCellBox = (px, py, w, h, cols, rows) => {
+            ctx.fillStyle = frame;
+            ctx.fillRect(px, py, w, h);
+            const cw = (w - 6) / cols;
+            const ch = (h - 6) / rows;
+            ctx.fillStyle = color;
+            for (let i = 0; i < cols; i++) {
+                for (let j = 0; j < rows; j++) {
+                    ctx.fillRect(px + 3 + i * cw, py + 3 + j * ch, Math.max(1, cw - 2), Math.max(1, ch - 2));
+                }
             }
-        }
-        
-        // Grid lines
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 3; i++) {
+            ctx.strokeStyle = line;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(px, py, w, h);
+        };
+
+        if (tier === 'tier2') {
+            // Two side-by-side panels
+            const w = (width - 4) / 2;
+            drawCellBox(x, y, w, height, 2, 2);
+            drawCellBox(x + w + 4, y, w, height, 2, 2);
+        } else if (tier === 'tier3') {
+            // Three wide panels in a row
+            const w = (width - 6) / 3;
+            for (let i = 0; i < 3; i++) {
+                drawCellBox(x + i * (w + 3), y, w, height, 4, 2);
+            }
+        } else if (tier === 'tier4') {
+            // Multi-wing fan shape with gold glow
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 12;
+            const cx = x + width / 2;
+            const cy = y + height / 2;
+            const wings = 7;
+            ctx.fillStyle = color;
+            for (let i = 0; i < wings; i++) {
+                const a = (i / wings) * Math.PI * 2 - Math.PI / 2;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(a);
+                ctx.beginPath();
+                ctx.moveTo(0, -2);
+                ctx.lineTo(width * 0.46, -6);
+                ctx.lineTo(width * 0.46, 3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+            // Central hub
+            ctx.fillStyle = color;
             ctx.beginPath();
-            ctx.moveTo(x + 5 + i * cellWidth, y + 5);
-            ctx.lineTo(x + 5 + i * cellWidth, y + height - 5);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(x + 5, y + 5 + i * cellHeight);
-            ctx.lineTo(x + width - 5, y + 5 + i * cellHeight);
-            ctx.stroke();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        } else {
+            // tier1: single flat 2×2 panel (small)
+            drawCellBox(x, y, width, height, 2, 2);
         }
     }
 
     drawBattery(ctx, x, y, width, height, tier) {
-        // Battery body
-        ctx.fillStyle = '#2d2d2d';
-        ctx.fillRect(x + 10, y, width - 20, height);
-        
-        // Battery top
-        ctx.fillStyle = '#4a4a4a';
-        ctx.fillRect(x + width / 2 - 10, y - 5, 20, 5);
-        
-        // Color based on tier: green (tier1), baby blue (tier2), purple (tier3), gold (tier4)
-        let chargeColor = '#2ecc71'; // tier1 - green
+        const colors = Theme.colors.tierColors || {};
+        const color = colors[tier] || colors.tier1 || Theme.colors.green;
+        const body = '#2d2d2d';
+        const topColor = '#4a4a4a';
+
+        // Draw a single battery cell (body + top terminal + charge fill)
+        const drawCell = (px, py, w, h) => {
+            ctx.fillStyle = body;
+            ctx.fillRect(px, py, w, h);
+            ctx.fillStyle = topColor;
+            ctx.fillRect(px + w / 2 - 6, py - 4, 12, 4);
+            ctx.fillStyle = color;
+            ctx.fillRect(px + 3, py + 3, w - 6, h - 6);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px, py, w, h);
+        };
+
         if (tier === 'tier2') {
-            chargeColor = '#74b9ff'; // tier2 - baby blue
+            // Stacked double cell
+            const h = (height - 4) / 2;
+            drawCell(x, y, width, h);
+            drawCell(x, y + h + 4, width, h);
         } else if (tier === 'tier3') {
-            chargeColor = '#a55eea'; // tier3 - purple
+            // Triple bank
+            const w = (width - 6) / 3;
+            for (let i = 0; i < 3; i++) {
+                drawCell(x + i * (w + 3), y, w, height);
+            }
         } else if (tier === 'tier4') {
-            chargeColor = '#f1c40f'; // tier4 - gold (Elite Power Core)
+            // Round radial core with gold glow
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 14;
+            const cx = x + width / 2;
+            const cy = y + height / 2;
+            const r = Math.min(width, height) / 2 - 2;
+            // Outer radial ring
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            // Inner core
+            ctx.fillStyle = body;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        } else {
+            // tier1: single tall cell
+            drawCell(x, y, width, height);
         }
-        
-        // Charge indicator (this will be dynamic based on actual charge)
-        const chargePercentage = 0.7; // Will be overridden when rendering
-        ctx.fillStyle = chargePercentage > 0.3 ? chargeColor : '#ff0000';
-        ctx.fillRect(x + 15, y + 10, (width - 30) * chargePercentage, height - 20);
-        
-        // Border
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x + 10, y, width - 20, height);
     }
 
     drawPowerLine(ctx, x1, y1, x2, y2) {
@@ -658,6 +730,11 @@ class WorldRenderer {
             const y = this.offsetY + panel.y;
             this.spriteManager.drawProceduralSprite(this.ctx, 'solar_panel', x, y, 60, 40, panel.tier);
             
+            // Draw tier badge for researched (tier2-4) panels
+            if (panel.tier === 'tier2' || panel.tier === 'tier3' || panel.tier === 'tier4') {
+                this.spriteManager.drawTierBadge(this.ctx, x + 30, y - 8, panel.tier);
+            }
+            
             // Draw gold border for tier4 (Elite) equipment
             if (panel.tier === 'tier4') {
                 this.drawGoldBorder(x, y, 60, 40);
@@ -678,6 +755,11 @@ class WorldRenderer {
             const x = this.offsetX + battery.x;
             const y = this.offsetY + battery.y;
             this.spriteManager.drawProceduralSprite(this.ctx, 'battery', x, y, 40, 60, battery.tier);
+            
+            // Draw tier badge for researched (tier2-4) batteries
+            if (battery.tier === 'tier2' || battery.tier === 'tier3' || battery.tier === 'tier4') {
+                this.spriteManager.drawTierBadge(this.ctx, x + 20, y - 8, battery.tier);
+            }
             
             // Draw gold border for tier4 (Elite) equipment
             if (battery.tier === 'tier4') {

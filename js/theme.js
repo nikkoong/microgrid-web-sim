@@ -32,6 +32,14 @@ window.Theme = {
         textBright: '#eaffe8',
         textDim: '#5f7a68',
 
+        // Tier colors (match tech-tree node colors)
+        tierColors: {
+            tier1: '#2ecc71',
+            tier2: '#74b9ff',
+            tier3: '#a55eea',
+            tier4: '#f1c40f'
+        },
+
         // World (keep-listed, unchanged)
         world: {
             tier1: '#2ecc71',
