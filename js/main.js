@@ -835,6 +835,8 @@ const Game = {
     updatePlacementPreview(worldX, worldY) {
         const offsetX = this.worldRenderer ? this.worldRenderer.offsetX : 50;
         const offsetY = this.worldRenderer ? this.worldRenderer.offsetY : 100;
+        const playWidth = this.worldRenderer ? this.worldRenderer.playWidth : 600;
+        const playHeight = this.worldRenderer ? this.worldRenderer.playHeight : 400;
         
         // Snap to grid in world space
         const rawX = worldX - offsetX;
@@ -845,9 +847,9 @@ const Game = {
         
         // Check validity
         const minX = offsetX;
-        const maxX = offsetX + 600 - this.gridSize;
+        const maxX = offsetX + playWidth - this.gridSize;
         const minY = offsetY;
-        const maxY = offsetY + 400 - this.gridSize;
+        const maxY = offsetY + playHeight - this.gridSize;
         
         let inBounds = (this.placementX >= minX && this.placementX <= maxX && 
                        this.placementY >= minY && this.placementY <= maxY);
